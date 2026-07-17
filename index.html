@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="无需登录、数据保存在浏览器本地的短视频素材投放分析看板">
+  <title>素材智析 · 本地公开版</title>
+  <style>
+:root{--ink:#19213a;--muted:#70788e;--line:#e4e8f0;--panel:#fff;--bg:#f5f6f8;--navy:#13233f;--blue:#3167ed;--cyan:#5ed3d0;--good:#0a9274;--good-bg:#e7f7f2;--poor:#d44852;--poor-bg:#fff0f1;--normal:#76642b;--normal-bg:#f8f2dc;--shadow:0 8px 30px #18233a0a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Microsoft YaHei",system-ui,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app-shell{max-width:1600px;margin:auto;padding:30px 34px 54px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:22px}
+.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--blue);font-weight:700}
+.topbar h1{font-size:32px;line-height:1;margin:8px 0 7px;letter-spacing:-.04em}
+.topbar h1 span{display:inline-block;font-size:11px;letter-spacing:.08em;color:#fff;background:var(--good);padding:4px 7px;border-radius:6px;vertical-align:middle}
+.topbar p{margin:0;color:var(--muted);font-size:14px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.upload-button,.secondary-button,.ghost-button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 16px;font-weight:650;text-decoration:none;white-space:nowrap}
+.upload-button{background:var(--navy);color:#fff;cursor:pointer}
+.upload-button:hover{background:#20395f}
+.secondary-button{background:#e8edfa;color:#244a9a}
+.ghost-button{background:#fff;border:1px solid var(--line);color:var(--muted)}
+.notice{padding:11px 14px;border-radius:8px;margin-bottom:14px;background:#eef3ff;color:#244a9a;border:1px solid #d6e1ff;font-size:13px}
+.notice.error{background:var(--poor-bg);color:var(--poor);border-color:#f3c6ca}
+.filter-strip{display:flex;align-items:end;gap:12px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;box-shadow:var(--shadow)}
+.filter-strip label,.field{display:grid;gap:5px;font-size:11px;color:var(--muted);font-weight:650}
+.filter-strip input,.filter-strip select,.field input,.field select{border:1px solid #d9deea;background:#fff;border-radius:7px;padding:8px 10px;color:var(--ink);outline:none}
+.filter-strip select{min-width:160px}
+.filter-strip input:focus,.filter-strip select:focus,.field input:focus,.field select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #3167ed18}
+.date-arrow{align-self:center;color:#9da4b5;margin-top:13px}
+.range-meta{margin-left:auto;align-self:center;font-size:12px;color:var(--muted)}
+.empty-state{padding:72px 24px;text-align:center;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.empty-mark{width:58px;height:58px;border-radius:50%;display:grid;place-content:center;margin:auto;background:#e8edfa;color:var(--blue);font-size:27px}
+.empty-state h2{margin:18px 0 8px}
+.empty-state p{max-width:620px;margin:0 auto 24px;color:var(--muted);line-height:1.7}
+.section-nav{display:flex;gap:5px;margin:0 0 16px;padding:5px;background:#e9edf3;border-radius:10px;width:max-content;max-width:100%;overflow:auto}
+.section-nav button{border:0;background:transparent;color:#596276;border-radius:7px;padding:8px 16px;white-space:nowrap;font-weight:600}
+.section-nav button.active{background:#fff;color:var(--navy);box-shadow:0 1px 5px #1f2d4a18}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.metric-grid article,.panel,.insight-grid article,.tier-grid article,.function-grid article{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.metric-grid article{padding:17px 18px;display:grid;gap:7px}
+.metric-grid span,.metric-grid small{color:var(--muted);font-size:12px}
+.metric-grid strong{font-size:25px;letter-spacing:-.03em}
+.good-text{color:var(--good)}
+.poor-text{color:var(--poor)}
+.insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.insight-grid article{padding:15px 17px;border-left:3px solid var(--blue)}
+.insight-grid b{font-size:13px}
+.insight-grid p{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.55}
+.two-column{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(340px,.55fr);gap:16px;margin-bottom:16px}
+.panel{padding:18px;min-width:0;margin-bottom:16px}
+.panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:12px}
+.panel-head h2{font-size:17px;margin:0}
+.panel-head p{font-size:11px;color:var(--muted);margin:5px 0 0}
+.chart-legend{font-size:10px;color:var(--muted);display:flex;gap:5px;align-items:center;white-space:nowrap}
+.chart-legend i{width:13px;height:4px;display:inline-block;margin-left:7px}
+.chart-legend .spend{background:var(--cyan)}
+.chart-legend .gross{background:#e36d55}
+.chart-legend .net{background:var(--blue)}
+.trend-chart{display:block;width:100%;height:auto;min-height:220px}
+.grid-line{stroke:#e8ebf1;stroke-width:1}
+.spend-bar{fill:var(--cyan);opacity:.72}
+.gross-line{fill:none;stroke:#e36d55;stroke-width:2}
+.roi-line{fill:none;stroke:var(--blue);stroke-width:2.2}
+.axis-label{fill:#8a91a4;font-size:10px}
+.category-list{display:grid;gap:11px}
+.category-row{display:grid;grid-template-columns:150px minmax(140px,1fr) 110px 110px 100px;gap:12px;align-items:center;font-size:12px}
+.category-name{display:flex;justify-content:space-between;gap:8px}
+.category-name small{color:var(--muted)}
+.bar-track{height:16px;background:#edf0f5;border-radius:5px;overflow:hidden}
+.bar-track i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:5px}
+.toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.toolbar-group{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.field input{min-width:210px}
+.field select{min-width:110px}
+.tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.tier-grid article{padding:16px;display:grid;gap:5px}
+.tier-grid span,.tier-grid small{font-size:11px;color:var(--muted)}
+.tier-grid strong{font-size:25px}
+.workspace{display:grid;grid-template-columns:minmax(560px,1.05fr) minmax(430px,.95fr);gap:16px;align-items:start}
+.table-panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.table-head{padding:18px;border-bottom:1px solid var(--line)}
+.table-wrap{overflow:auto;max-height:660px}
+table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}
+th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right}
+th{position:sticky;top:0;background:#fafbfc;color:var(--muted);font-size:10px;letter-spacing:.04em;z-index:1}
+th:first-child,td:first-child{text-align:left}
+tbody tr[data-material]{cursor:pointer}
+tbody tr[data-material]:hover{background:#f7f9fe}
+tbody tr.selected{background:#eef3ff;box-shadow:inset 3px 0 var(--blue)}
+.material-name{max-width:260px;white-space:normal;font-weight:700}
+.material-name small{display:block;color:var(--muted);font-weight:400;margin-top:3px}
+.tier{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.tier.good{color:var(--good);background:var(--good-bg)}
+.tier.normal{color:var(--normal);background:var(--normal-bg)}
+.tier.poor{color:var(--poor);background:var(--poor-bg)}
+.detail-panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;box-shadow:var(--shadow);min-height:400px}
+.detail-empty{min-height:360px;display:grid;place-content:center;text-align:center;color:var(--muted)}
+.detail-empty strong{color:var(--ink);font-size:17px;margin-bottom:6px}
+.detail-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.detail-panel h2{font-size:18px;margin:15px 0 5px;word-break:break-all}
+.material-id{font:12px ui-monospace,Consolas,monospace;color:var(--muted)}
+.decision-note{background:#f4f6fa;border-left:3px solid var(--blue);padding:11px 12px;border-radius:0 7px 7px 0;font-size:12px;line-height:1.55;margin:14px 0}
+.detail-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.detail-metrics div{display:grid;gap:5px}
+.detail-metrics span{font-size:10px;color:var(--muted)}
+.detail-metrics strong{font-size:16px}
+.function-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.function-grid article{padding:16px;border-top:4px solid var(--func)}
+.function-head{display:flex;align-items:center;gap:8px}
+.function-head i{width:9px;height:9px;border-radius:50%;background:var(--func)}
+.function-head h2{font-size:16px;margin:0}
+.function-head b{margin-left:auto;font-size:12px;background:#f1f3f6;padding:3px 8px;border-radius:99px}
+.function-grid p{font-size:11px;color:var(--muted);min-height:34px;line-height:1.5}
+.function-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.function-metrics span{display:grid;gap:2px;font-size:10px;color:var(--muted)}
+.function-metrics b{font-size:13px;color:var(--ink)}
+.action-filter{display:flex;gap:8px;flex-wrap:wrap}
+.action-filter button{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:8px 10px}
+.action-filter button.active{border-color:var(--blue);color:var(--navy);box-shadow:0 0 0 3px #3167ed14}
+.action-filter i{width:8px;height:8px;border-radius:50%;background:var(--dot)}
+.function-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:99px;background:#f0f2f5;font-weight:700}
+.function-badge:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--func)}
+.action-copy{white-space:normal;min-width:280px;text-align:left;line-height:1.55}
+.chart-empty{min-height:240px;display:grid;place-content:center;color:var(--muted);font-size:12px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+[hidden]{display:none!important}
+@media(max-width:1180px){.metric-grid{grid-template-columns:repeat(2,1fr)}.two-column,.workspace{grid-template-columns:1fr}.function-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:130px minmax(100px,1fr) 95px 95px}.category-row>span:last-child{display:none}}
+@media(max-width:760px){.app-shell{padding:20px 14px 40px}.topbar{align-items:flex-start}.header-actions{align-items:flex-end;flex-direction:column}.filter-strip{align-items:stretch;flex-wrap:wrap}.filter-strip label{flex:1}.range-meta,.date-arrow{display:none}.insight-grid,.function-grid{grid-template-columns:1fr}.tier-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:100px minmax(90px,1fr) 90px}.category-row>span:nth-last-child(-n+2){display:none}.detail-metrics{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.toolbar-group,.field,.field input,.field select{width:100%}}
+@media(max-width:470px){.topbar{flex-direction:column}.header-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap}.metric-grid,.tier-grid{grid-template-columns:1fr}.section-nav{width:100%}.section-nav button{flex:1;padding:8px 10px}.category-row{grid-template-columns:90px 1fr}.category-row>span{display:none!important}}
+
+</style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">DOUYIN MATERIAL OPERATING SYSTEM</div>
+        <h1>素材智析 <span>LOCAL</span></h1>
+        <p>数据仅保存在当前浏览器 · 上传后自动完成净成交经营分析</p>
+      </div>
+      <div class="header-actions">
+        <label class="upload-button" for="excel-file">＋ 上传 Excel</label>
+        <input id="excel-file" class="sr-only" type="file" accept=".xlsx,.xls">
+        <button id="clear-data" class="ghost-button" type="button">清空本地数据</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <section id="filters" class="filter-strip" hidden>
+      <label>店铺
+        <select id="shop-filter"><option value="all">全部店铺</option></select>
+      </label>
+      <label>开始日期<input id="start-date" type="date"></label>
+      <span class="date-arrow">→</span>
+      <label>结束日期<input id="end-date" type="date"></label>
+      <button id="reanalyze" class="secondary-button" type="button">重新分析</button>
+      <div class="range-meta">指标、评分和画像均按所选店铺与日期计算</div>
+    </section>
+
+    <section id="empty-state" class="empty-state">
+      <div class="empty-mark">↥</div>
+      <h2>上传第一份素材数据</h2>
+      <p>支持原始 Excel 字段，数据只写入当前浏览器，不会上传至服务器。之后再次打开仍可继续分析。</p>
+      <label class="upload-button" for="excel-file">选择 Excel 文件</label>
+    </section>
+
+    <div id="dashboard" hidden>
+      <nav class="section-nav" aria-label="分析模块">
+        <button type="button" data-tab="overview" class="active">经营总览</button>
+        <button type="button" data-tab="materials">素材评分</button>
+        <button type="button" data-tab="functional">功能画像</button>
+        <button type="button" data-tab="actions">行动清单</button>
+      </nav>
+      <section id="view-overview" class="tab-view"></section>
+      <section id="view-materials" class="tab-view" hidden></section>
+      <section id="view-functional" class="tab-view" hidden></section>
+      <section id="view-actions" class="tab-view" hidden></section>
+    </div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script type="module">
+const TIER_LABELS = { good: "优质", normal: "普通", poor: "劣质" };
+
+const FUNCTION_META = {
+  "爆款型": { color: "#e36d55", description: "点击、转化和净ROI均较优，具备稳定放量基础" },
+  "精品型": { color: "#16a394", description: "小预算高回报，适合阶梯式验证放量" },
+  "引流型": { color: "#2f6bff", description: "点击能力较强但成交承接不足" },
+  "损耗型": { color: "#8a93a3", description: "消耗较高但净ROI偏低，需要控制损耗" },
+  "误导型": { color: "#dd5a61", description: "点击较高但退款偏高，应检查内容承诺" },
+  "其他": { color: "#b7bfca", description: "样本或特征不足，暂未形成明确功能" },
+};
+
+const n = (value) => Number(value) || 0;
+const div = (a, b) => (b ? a / b : 0);
+
+function normalizeDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.valueOf())) {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  }
+  const raw = String(value ?? "").trim();
+  const match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (match) return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+  if (/^\d{5}(\.\d+)?$/.test(raw)) {
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    epoch.setUTCDate(epoch.getUTCDate() + Math.floor(Number(raw)));
+    return epoch.toISOString().slice(0, 10);
+  }
+  return raw;
+}
+
+function numberValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Number(String(value ?? "").replace(/[%¥￥,，\s]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function percentValue(value) {
+  const text = String(value ?? "");
+  const parsed = numberValue(value);
+  return text.includes("%") ? parsed / 100 : parsed;
+}
+
+function normalizeExcelRow(row) {
+  const shopCode = String(row["店铺编码"] ?? "").trim();
+  const materialId = String(row["素材ID"] ?? "").trim();
+  const date = normalizeDate(row["日期"]);
+  const grossAmount = numberValue(row["整体成交金额"]);
+  const netAmount = numberValue(row["净成交金额"]);
+  const refundRate = percentValue(row["1小时内退款率"]);
+  return {
+    key: `${shopCode}::${materialId}::${date}`,
+    shopCode,
+    materialId,
+    materialName: String(row["素材视频名称"] ?? "未命名素材").trim() || "未命名素材",
+    materialCreatedAt: String(row["素材创建时间"] ?? ""),
+    date,
+    impressions: numberValue(row["整体展示次数"]),
+    clicks: numberValue(row["整体点击次数"]),
+    spend: numberValue(row["整体消耗"]),
+    grossOrders: numberValue(row["整体成交订单数"]),
+    grossAmount,
+    netAmount,
+    netOrders: numberValue(row["净成交订单数"]),
+    refundWeighted: grossAmount * refundRate || Math.max(0, grossAmount - netAmount),
+  };
+}
+
+function quantile(values, p) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return 0;
+  const index = (sorted.length - 1) * p;
+  const low = Math.floor(index);
+  const high = Math.ceil(index);
+  return sorted[low] + (sorted[high] - sorted[low]) * (index - low);
+}
+
+function ranker(values, inverse = false) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  return (value) => {
+    let low = 0;
+    let high = sorted.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (sorted[mid] <= value) low = mid + 1;
+      else high = mid;
+    }
+    const rank = sorted.length ? low / sorted.length : 0;
+    return inverse ? 1 - rank : rank;
+  };
+}
+
+function categoryOf(name) {
+  const sets = [
+    ["毛绒", /毛绒|公仔|玩偶|小猪|猫|熊|挂件|水豚|史迪仔|阿柴/i],
+    ["潮玩", /盲盒|三丽鸥|kitty|萌豆|yoyo|冰箱贴|腕表|玩具/i],
+    ["出行个护", /气囊梳|梳子|风扇|随手杯|保温杯|旅行|u型枕|个护/i],
+    ["香氛护肤彩妆", /香水|香氛|护肤|彩妆|气垫|口红|唇|面膜|精华/i],
+  ];
+  const matched = sets.filter(([, re]) => re.test(name)).map(([label]) => label);
+  return matched.length > 1 ? "分类冲突" : matched[0] || "其他";
+}
+
+function aggregateRows(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const key = `${row.shopCode}::${row.materialId}`;
+    const current = map.get(key) || {
+      shopCode: row.shopCode,
+      id: row.materialId,
+      name: row.materialName,
+      dates: new Set(),
+      impressions: 0,
+      clicks: 0,
+      spend: 0,
+      grossOrders: 0,
+      grossAmount: 0,
+      netAmount: 0,
+      netOrders: 0,
+      refundWeighted: 0,
+    };
+    current.name = row.materialName || current.name;
+    current.dates.add(row.date);
+    for (const field of ["impressions", "clicks", "spend", "grossOrders", "grossAmount", "netAmount", "netOrders", "refundWeighted"]) {
+      current[field] += n(row[field]);
+    }
+    map.set(key, current);
+  }
+  return [...map.values()].map((item) => ({ ...item, days: item.dates.size, dates: undefined }));
+}
+
+function summarize(materials) {
+  const total = materials.reduce((acc, item) => {
+    for (const field of ["spend", "grossAmount", "netAmount", "grossOrders", "netOrders", "impressions", "clicks", "refundWeighted"]) {
+      acc[field] += n(item[field]);
+    }
+    return acc;
+  }, { spend: 0, grossAmount: 0, netAmount: 0, grossOrders: 0, netOrders: 0, impressions: 0, clicks: 0, refundWeighted: 0 });
+  return {
+    ...total,
+    grossRoi: div(total.grossAmount, total.spend),
+    netRoi: div(total.netAmount, total.spend),
+    ctr: div(total.clicks, total.impressions),
+    refundLoss: Math.max(0, total.grossAmount - total.netAmount),
+    refundRate: div(total.grossAmount - total.netAmount, total.grossAmount),
+  };
+}
+
+function classifyFunctional(item, thresholds) {
+  if (item.spend < 50) return "其他";
+  const highCtr = item.ctr >= thresholds.ctrMedian;
+  const highCvr = item.cvr >= thresholds.cvrMedian;
+  const highRoi = item.netRoi >= thresholds.roiMedian;
+  if (highCtr && item.refund >= thresholds.refundRisk) return "误导型";
+  if (highCtr && highCvr && highRoi) return "爆款型";
+  if (highCtr && !highCvr) return "引流型";
+  if (item.spend >= thresholds.spend75 && !highRoi) return "损耗型";
+  if (item.spend <= thresholds.spendMedian && item.netRoi >= thresholds.roi75) return "精品型";
+  return "其他";
+}
+
+function actionFor(item) {
+  if (item.grossOrders >= 10 && item.grossAmount >= 500 && item.refund >= 0.2) return "暂停扩量，核对规格、价格、赠品与实物展示，并制作低冲动表达版本对照测试。";
+  if (item.spend >= 50 && item.netOrders === 0) return "停止继续试量；如需重启，先更换前3秒内容假设和商品承接方案。";
+  if (item.functionalType === "损耗型") return "降低出价或缩小受众，连续观察净ROI；无改善则暂停。";
+  if (item.functionalType === "引流型") return "保留引流价值，重点优化商品承接、利益点和成交路径。";
+  if (item.functionalType === "精品型") return "逐级增加预算，验证放量后的净ROI和退款率是否稳定。";
+  if (item.functionalType === "爆款型") return "守住预算并按周监测衰退信号，提前准备同题材替代素材。";
+  if (item.functionalType === "误导型") return "检查内容承诺与实物落差，降低冲动表达并验证退款是否回落。";
+  return "小预算验证，观察净ROI与退款率稳定性后再决定是否放量。";
+}
+
+function reasonFor(item) {
+  const reasons = [];
+  if (item.spend < 50) reasons.push("消耗不足¥50，暂不进入稳定评分");
+  else reasons.push(`贝叶斯净ROI ${item.bayesNetRoi.toFixed(2)}`);
+  if (item.refund >= 0.15) reasons.push(`退款损失率 ${(item.refund * 100).toFixed(1)}%`);
+  if (item.netOrders) reasons.push(`净订单成本 ¥${item.cpa.toFixed(2)}`);
+  else if (item.spend >= 50) reasons.push("有消耗但无净订单");
+  return reasons.join("；");
+}
+
+function analyzeRows(rows) {
+  const base = aggregateRows(rows).map((item) => ({
+    ...item,
+    grossRoi: div(item.grossAmount, item.spend),
+    netRoi: div(item.netAmount, item.spend),
+    ctr: div(item.clicks, item.impressions),
+    cvr: div(item.grossOrders, item.clicks),
+    cpc: div(item.spend, item.clicks),
+    cpa: item.netOrders ? item.spend / item.netOrders : 0,
+    settlement: div(item.netAmount, item.grossAmount),
+    refund: div(item.grossAmount - item.netAmount, item.grossAmount),
+    category: categoryOf(item.name),
+  }));
+  const eligible = base.filter((item) => item.spend >= 50);
+  const priorGross = quantile(eligible.map((item) => item.grossRoi), 0.5);
+  const priorNet = quantile(eligible.map((item) => item.netRoi), 0.5);
+  const priorWeight = 200;
+  const modeled = base.map((item) => ({
+    ...item,
+    bayesRoi: div(item.grossAmount + priorWeight * priorGross, item.spend + priorWeight),
+    bayesNetRoi: div(item.netAmount + priorWeight * priorNet, item.spend + priorWeight),
+    confidence: 100 * item.spend / (item.spend + priorWeight),
+  }));
+  const thresholds = {
+    eligible: eligible.length,
+    total: modeled.length,
+    priorWeight,
+    priorGross,
+    priorNet,
+    ctrMedian: quantile(eligible.map((item) => item.ctr), 0.5),
+    cvrMedian: quantile(eligible.map((item) => item.cvr), 0.5),
+    roiMedian: quantile(eligible.map((item) => item.netRoi), 0.5),
+    roi75: quantile(eligible.map((item) => item.netRoi), 0.75),
+    spendMedian: quantile(eligible.map((item) => item.spend), 0.5),
+    spend75: quantile(eligible.map((item) => item.spend), 0.75),
+    refundRisk: 0.15,
+  };
+  const ranks = {
+    gross: ranker(modeled.filter((m) => m.spend >= 50).map((m) => m.bayesRoi)),
+    net: ranker(modeled.filter((m) => m.spend >= 50).map((m) => m.bayesNetRoi)),
+    cvr: ranker(eligible.map((m) => m.cvr)),
+    ctr: ranker(eligible.map((m) => m.ctr)),
+    amount: ranker(eligible.map((m) => Math.log1p(m.netAmount))),
+    spend: ranker(eligible.map((m) => Math.log1p(m.spend))),
+    refund: ranker(eligible.map((m) => m.refund), true),
+  };
+  const materials = modeled.map((item) => {
+    const score = item.spend < 50 ? 0 : Math.round(100 * (
+      0.25 * ranks.gross(item.bayesRoi) +
+      0.20 * ranks.net(item.bayesNetRoi) +
+      0.15 * ranks.cvr(item.cvr) +
+      0.10 * ranks.ctr(item.ctr) +
+      0.10 * ranks.amount(Math.log1p(item.netAmount)) +
+      0.10 * ranks.spend(Math.log1p(item.spend)) +
+      0.10 * ranks.refund(item.refund)
+    ));
+    const tier = score >= 70 ? "good" : score >= 40 ? "normal" : "poor";
+    const functionalType = classifyFunctional(item, thresholds);
+    const result = { ...item, score, tier, functionalType };
+    return { ...result, reason: reasonFor(result), action: actionFor(result) };
+  }).sort((a, b) => b.score - a.score || b.spend - a.spend);
+
+  const summary = summarize(materials);
+  const tiers = {
+    good: materials.filter((item) => item.tier === "good").length,
+    normal: materials.filter((item) => item.tier === "normal").length,
+    poor: materials.filter((item) => item.tier === "poor").length,
+  };
+  const categories = ["毛绒", "潮玩", "出行个护", "香氛护肤彩妆", "其他", "分类冲突"]
+    .map((name) => {
+      const items = materials.filter((item) => item.category === name);
+      return { name, count: items.length, ...summarize(items) };
+    }).filter((item) => item.count).sort((a, b) => b.spend - a.spend);
+  const functions = Object.keys(FUNCTION_META).map((type) => {
+    const items = materials.filter((item) => item.spend >= 50 && item.functionalType === type);
+    const totals = summarize(items);
+    return {
+      type,
+      count: items.length,
+      share: div(items.length, eligible.length),
+      spendShare: div(totals.spend, summary.spend),
+      netShare: div(totals.netAmount, summary.netAmount),
+      netRoi: totals.netRoi,
+      refundRate: totals.refundRate,
+    };
+  });
+  const months = new Map();
+  for (const row of rows) {
+    const month = row.date.slice(0, 7);
+    const current = months.get(month) || { month, spend: 0, grossAmount: 0, netAmount: 0, ids: new Set() };
+    current.spend += n(row.spend);
+    current.grossAmount += n(row.grossAmount);
+    current.netAmount += n(row.netAmount);
+    current.ids.add(`${row.shopCode}::${row.materialId}`);
+    months.set(month, current);
+  }
+  const monthly = [...months.values()].sort((a, b) => a.month.localeCompare(b.month)).map((item) => ({
+    month: item.month,
+    spend: item.spend,
+    grossAmount: item.grossAmount,
+    netAmount: item.netAmount,
+    grossRoi: div(item.grossAmount, item.spend),
+    netRoi: div(item.netAmount, item.spend),
+    materials: item.ids.size,
+  }));
+  return { materials, summary, tiers, thresholds, categories, functions, monthly };
+}
+
+function buildTrend(rows, material) {
+  const daily = new Map();
+  for (const row of rows.filter((r) => r.materialId === material.id && r.shopCode === material.shopCode)) {
+    const current = daily.get(row.date) || { date: row.date, spend: 0, grossAmount: 0, netAmount: 0, netOrders: 0 };
+    current.spend += n(row.spend);
+    current.grossAmount += n(row.grossAmount);
+    current.netAmount += n(row.netAmount);
+    current.netOrders += n(row.netOrders);
+    daily.set(row.date, current);
+  }
+  const base = [...daily.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const roiMedian = quantile(base.map((item) => div(item.netAmount, item.spend)), 0.5);
+  return base.map((item, index) => {
+    const win = base.slice(Math.max(0, index - 6), index + 1);
+    const prev = base.slice(Math.max(0, index - 13), Math.max(0, index - 6));
+    const rollSpend = win.reduce((sum, row) => sum + row.spend, 0) / win.length;
+    const rollRoi = div(win.reduce((sum, row) => sum + row.netAmount, 0), win.reduce((sum, row) => sum + row.spend, 0));
+    const prevSpend = prev.length ? prev.reduce((sum, row) => sum + row.spend, 0) / prev.length : rollSpend;
+    const prevRoi = div(prev.reduce((sum, row) => sum + row.netAmount, 0), prev.reduce((sum, row) => sum + row.spend, 0));
+    let stage = "稳定期";
+    if (index < 7) stage = "测试期";
+    else if (win.every((row) => row.spend === 0)) stage = "停投期";
+    else if (rollSpend > prevSpend * 1.25 && rollRoi >= roiMedian) stage = "放量期";
+    else if (rollSpend < prevSpend * 0.7 || rollRoi < prevRoi * 0.7) stage = "衰退期";
+    else if (rollRoi >= roiMedian) stage = "成熟期";
+    return {
+      ...item,
+      grossRoi: div(item.grossAmount, item.spend),
+      netRoi: div(item.netAmount, item.spend),
+      rollSpend,
+      rollRoi,
+      stage,
+    };
+  });
+}
+
+
+const DB_NAME = "video-material-insights-local";
+const DB_VERSION = 1;
+const STORE = "daily-metrics";
+
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "key" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function readRows() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveRows(rows) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE, "readwrite");
+    const store = transaction.objectStore(STORE);
+    rows.forEach((row) => store.put(row));
+    transaction.oncomplete = () => resolve(rows.length);
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+async function clearRows() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(STORE, "readwrite").objectStore(STORE).clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+
+
+
+
+const $ = (selector) => document.querySelector(selector);
+const $ = (selector) => [...document.querySelectorAll(selector)];
+const money = (value) => `¥${Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: value < 100 ? 2 : 0 })}`;
+const fmt = (value, digits = 0) => Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: digits });
+const pct = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
+const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+
+const state = {
+  rows: [],
+  analysis: null,
+  filteredRows: [],
+  selected: null,
+  materialTier: "all",
+  materialQuery: "",
+  actionType: "全部",
+  actionQuery: "",
+};
+
+const elements = {
+  file: $("#excel-file"),
+  notice: $("#notice"),
+  filters: $("#filters"),
+  shop: $("#shop-filter"),
+  start: $("#start-date"),
+  end: $("#end-date"),
+  empty: $("#empty-state"),
+  dashboard: $("#dashboard"),
+};
+
+function showNotice(message, error = false) {
+  elements.notice.textContent = message;
+  elements.notice.classList.toggle("error", error);
+  elements.notice.hidden = !message;
+  if (message) setTimeout(() => { if (elements.notice.textContent === message) elements.notice.hidden = true; }, 6000);
+}
+
+function updateBounds(resetDates = false) {
+  const shops = [...new Set(state.rows.map((row) => row.shopCode).filter(Boolean))].sort();
+  const dates = state.rows.map((row) => row.date).filter(Boolean).sort();
+  const minDate = dates[0] || "";
+  const maxDate = dates.at(-1) || "";
+  elements.shop.innerHTML = `<option value="all">全部店铺</option>${shops.map((shop) => `<option value="${esc(shop)}">${esc(shop)}</option>`).join("")}`;
+  if (resetDates || !elements.start.value) elements.start.value = minDate;
+  if (resetDates || !elements.end.value) elements.end.value = maxDate;
+  elements.start.min = minDate;
+  elements.start.max = maxDate;
+  elements.end.min = minDate;
+  elements.end.max = maxDate;
+  elements.filters.hidden = !state.rows.length;
+  elements.empty.hidden = Boolean(state.rows.length);
+  elements.dashboard.hidden = !state.rows.length;
+}
+
+function applyAnalysis() {
+  const shop = elements.shop.value;
+  const start = elements.start.value;
+  const end = elements.end.value;
+  state.filteredRows = state.rows.filter((row) => (shop === "all" || row.shopCode === shop) && row.date >= start && row.date <= end);
+  state.analysis = analyzeRows(state.filteredRows);
+  state.selected = null;
+  renderAll();
+}
+
+function renderMetrics() {
+  const a = state.analysis;
+  const s = a.summary;
+  const good = a.materials.filter((item) => item.tier === "good");
+  const goodSpend = good.reduce((sum, item) => sum + item.spend, 0);
+  const goodNet = good.reduce((sum, item) => sum + item.netAmount, 0);
+  return `<section class="metric-grid">
+    <article><span>投放消耗</span><strong>${money(s.spend)}</strong><small>${a.materials.length} 条素材</small></article>
+    <article><span>整体成交额 / ROI</span><strong>${money(s.grossAmount)}</strong><small>整体ROI ${s.grossRoi.toFixed(2)}</small></article>
+    <article><span>净成交额 / ROI</span><strong class="good-text">${money(s.netAmount)}</strong><small>净ROI ${s.netRoi.toFixed(2)}</small></article>
+    <article><span>退款损失</span><strong class="poor-text">${money(s.refundLoss)}</strong><small>金额损失率 ${pct(s.refundRate)}</small></article>
+    <article><span>整体 / 净订单</span><strong>${fmt(s.grossOrders)}</strong><small>净成交 ${fmt(s.netOrders)} 单</small></article>
+    <article><span>达到评分门槛</span><strong>${a.thresholds.eligible}</strong><small>消耗 ≥ ¥50</small></article>
+    <article><span>优质素材贡献</span><strong>${a.tiers.good} 条</strong><small>消耗${pct(goodSpend / (s.spend || 1))} · 净成交${pct(goodNet / (s.netAmount || 1))}</small></article>
+    <article><span>本地日级记录</span><strong>${fmt(state.filteredRows.length)}</strong><small>${esc(elements.start.value)} 至 ${esc(elements.end.value)}</small></article>
+  </section>`;
+}
+
+function monthlyChart(data) {
+  if (!data.length) return `<div class="chart-empty">所选范围暂无趋势数据</div>`;
+  const width = 760, height = 292, left = 48, right = 44, top = 18, bottom = 34;
+  const plotWidth = width - left - right, plotHeight = height - top - bottom;
+  const maxSpend = Math.max(...data.map((item) => item.spend), 1);
+  const maxRoi = Math.max(...data.map((item) => item.grossRoi), ...data.map((item) => item.netRoi), 1);
+  const step = plotWidth / data.length, barWidth = Math.min(34, step * 0.48);
+  const points = (key) => data.map((item, index) => `${left + (index + 0.5) * step},${top + plotHeight * (1 - item[key] / maxRoi)}`).join(" ");
+  return `<svg class="trend-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月度消耗、整体ROI和净ROI趋势">
+    ${[0, 0.25, 0.5, 0.75, 1].map((t) => `<line class="grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight * t}" y2="${top + plotHeight * t}"/><text class="axis-label" x="${left - 7}" y="${top + plotHeight * t + 4}" text-anchor="end">${fmt(maxSpend * (1 - t) / 10000, 1)}万</text>`).join("")}
+    ${data.map((item, index) => { const h = plotHeight * item.spend / maxSpend; return `<rect class="spend-bar" x="${left + (index + 0.5) * step - barWidth / 2}" y="${top + plotHeight - h}" width="${barWidth}" height="${h}" rx="3"><title>${esc(item.month)} 消耗${money(item.spend)} 净ROI ${item.netRoi.toFixed(2)}</title></rect>`; }).join("")}
+    <polyline points="${points("grossRoi")}" class="gross-line"/><polyline points="${points("netRoi")}" class="roi-line"/>
+    ${data.map((item, index) => `<text class="axis-label" x="${left + (index + 0.5) * step}" y="${height - 8}" text-anchor="middle">${esc(item.month.slice(5))}</text>`).join("")}
+  </svg>`;
+}
+
+function renderOverview() {
+  const a = state.analysis;
+  const s = a.summary;
+  const maxCategory = Math.max(...a.categories.map((item) => item.spend), 1);
+  $("#view-overview").innerHTML = `${renderMetrics()}
+    <section class="insight-grid">
+      <article><b>预算聚焦</b><p>${a.tiers.good}条优质素材贡献${pct(a.materials.filter((m) => m.tier === "good").reduce((sum, m) => sum + m.netAmount, 0) / (s.netAmount || 1))}净成交，预算应向稳定高分素材倾斜。</p></article>
+      <article><b>退款侵蚀</b><p>整体ROI ${s.grossRoi.toFixed(2)} 降至净ROI ${s.netRoi.toFixed(2)}，退款造成 ${money(s.refundLoss)} 成交损失。</p></article>
+      <article><b>评分可信度</b><p>采用¥${a.thresholds.priorWeight}先验权重收缩小样本ROI，减少偶然成交导致的虚高。</p></article>
+    </section>
+    <section class="two-column">
+      <article class="panel"><div class="panel-head"><div><h2>月度经营趋势</h2><p>消耗柱 · 整体ROI线 · 净ROI线</p></div><div class="chart-legend"><i class="spend"></i>消耗<i class="gross"></i>整体ROI<i class="net"></i>净ROI</div></div>${monthlyChart(a.monthly)}</article>
+      <article class="panel"><div class="panel-head"><div><h2>等级分布</h2><p>按当前筛选范围重新计算</p></div></div><table><thead><tr><th>等级</th><th>素材数</th><th>占比</th></tr></thead><tbody>${["good", "normal", "poor"].map((tier) => `<tr><td><span class="tier ${tier}">${TIER_LABELS[tier]}</span></td><td>${a.tiers[tier]}</td><td>${pct(a.tiers[tier] / (a.materials.length || 1))}</td></tr>`).join("")}</tbody></table></article>
+    </section>
+    <section class="panel"><div class="panel-head"><div><h2>品类经营表现</h2><p>根据素材名称关键词自动归类</p></div></div><div class="category-list">${a.categories.map((item) => `<div class="category-row"><div class="category-name"><b>${esc(item.name)}</b><small>${item.count}条</small></div><div class="bar-track"><i style="width:${item.spend / maxCategory * 100}%"></i></div><span>${money(item.spend)}</span><span>净ROI ${item.netRoi.toFixed(2)}</span><span>退款 ${pct(item.refundRate)}</span></div>`).join("")}</div></section>`;
+}
+
+function filteredMaterials() {
+  const query = state.materialQuery.trim().toLowerCase();
+  return state.analysis.materials.filter((item) => (state.materialTier === "all" || item.tier === state.materialTier) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
+}
+
+function lifecycleChart(data) {
+  if (!data.length) return `<div class="chart-empty">所选时间暂无投放记录</div>`;
+  const width = 820, height = 305, left = 50, right = 44, top = 38, bottom = 36;
+  const plotWidth = width - left - right, plotHeight = height - top - bottom;
+  const maxSpend = Math.max(...data.map((item) => item.spend), 1), maxRoi = Math.max(...data.map((item) => item.rollRoi), 1);
+  const step = plotWidth / data.length, barWidth = Math.max(2, Math.min(12, step * 0.58));
+  const colors = { "测试期": "#a7b1c2", "放量期": "#4b78f0", "成熟期": "#18a689", "稳定期": "#73b9d2", "衰退期": "#e69a2b", "停投期": "#d94c55" };
+  const path = data.map((item, index) => `${left + (index + 0.5) * step},${top + plotHeight * (1 - item.rollRoi / maxRoi)}`).join(" ");
+  return `<svg class="trend-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="素材生命周期趋势">
+    ${data.map((item, index) => `<rect x="${left + index * step}" y="8" width="${Math.max(1, step)}" height="13" fill="${colors[item.stage] || colors["稳定期"]}"><title>${esc(item.date)} ${esc(item.stage)}</title></rect>`).join("")}
+    ${[0, 0.5, 1].map((t) => `<line class="grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight * t}" y2="${top + plotHeight * t}"/>`).join("")}
+    ${data.map((item, index) => { const h = plotHeight * item.spend / maxSpend; return `<rect class="spend-bar" x="${left + (index + 0.5) * step - barWidth / 2}" y="${top + plotHeight - h}" width="${barWidth}" height="${h}" rx="2"><title>${esc(item.date)} 消耗${money(item.spend)} 7日净ROI ${item.rollRoi.toFixed(2)} ${esc(item.stage)}</title></rect>`; }).join("")}
+    <polyline points="${path}" class="roi-line"/>
+    ${[0, Math.floor((data.length - 1) / 2), data.length - 1].filter((value, index, array) => array.indexOf(value) === index).map((index) => `<text class="axis-label" x="${left + (index + 0.5) * step}" y="${height - 8}" text-anchor="middle">${esc(data[index].date.slice(5))}</text>`).join("")}
+  </svg>`;
+}
+
+function renderMaterialDetail() {
+  const container = $("#material-detail");
+  if (!container) return;
+  const item = state.selected;
+  if (!item) {
+    container.innerHTML = `<div class="detail-empty"><strong>选择一条素材</strong><span>查看评分理由、经营指标和投放生命周期</span></div>`;
+    return;
+  }
+  const trend = buildTrend(state.filteredRows, item);
+  container.innerHTML = `<div class="detail-top"><span class="tier ${item.tier}">${TIER_LABELS[item.tier]} · ${item.score}分</span><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></div>
+    <h2>${esc(item.name)}</h2><div class="material-id">店铺 ${esc(item.shopCode)} · 素材ID ${esc(item.id)}</div>
+    <div class="decision-note"><b>分析理由：</b>${esc(item.reason)}<br><b>建议：</b>${esc(item.action)}</div>
+    <div class="detail-metrics"><div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>净ROI</span><strong>${item.netRoi.toFixed(2)}</strong></div><div><span>净成交</span><strong>${money(item.netAmount)}</strong></div><div><span>退款损失率</span><strong>${pct(item.refund)}</strong></div></div>
+    <div class="panel-head"><div><h2>素材投放趋势</h2><p>日消耗柱 · 7日滚动净ROI线 · 顶部生命周期阶段</p></div></div>${lifecycleChart(trend)}`;
+}
+
+function renderMaterials() {
+  const items = filteredMaterials();
+  $("#view-materials").innerHTML = `<section class="tier-grid">
+    <article><span>全部素材</span><strong>${state.analysis.materials.length}</strong><small>当前筛选范围</small></article>
+    ${["good", "normal", "poor"].map((tier) => `<article><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))}</small></article>`).join("")}
+    </section>
+    <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><b>素材评分明细</b><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>素材</th><th>功能画像</th><th>评分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)}</small></td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div></div>
+      <aside id="material-detail" class="detail-panel"></aside></section>`;
+  $("#tier-filter").value = state.materialTier;
+  $("#material-search").value = state.materialQuery;
+  $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.selected = null; renderMaterials(); });
+  $("#material-search").addEventListener("input", (event) => { state.materialQuery = event.target.value; state.selected = null; renderMaterials(); });
+  $("tr[data-material]").forEach((row) => row.addEventListener("click", () => { state.selected = items[Number(row.dataset.material)]; renderMaterials(); }));
+  renderMaterialDetail();
+}
+
+function renderFunctional() {
+  $("#view-functional").innerHTML = `<section class="function-grid">${state.analysis.functions.map((item) => { const meta = FUNCTION_META[item.type]; return `<article style="--func:${meta.color}"><div class="function-head"><i></i><h2>${esc(item.type)}</h2><b>${item.count}条</b></div><p>${esc(meta.description)}</p><div class="function-metrics"><span>素材占比<b>${pct(item.share)}</b></span><span>消耗占比<b>${pct(item.spendShare)}</b></span><span>净ROI<b>${item.netRoi.toFixed(2)}</b></span><span>净成交占比<b>${pct(item.netShare)}</b></span><span>退款损失率<b>${pct(item.refundRate)}</b></span></div></article>`; }).join("")}</section>
+    <section class="panel"><div class="panel-head"><div><h2>功能画像判定逻辑</h2><p>画像用于明确运营角色，不等同于优质、普通、劣质评分</p></div></div><p>爆款型：点击、转化、净ROI同时较高；精品型：低消耗、高净ROI；引流型：点击较高但转化偏低；损耗型：消耗较高但净ROI偏低；误导型：点击较高且退款损失率达到15%以上。</p></section>`;
+}
+
+function renderActions() {
+  const types = ["全部", ...Object.keys(FUNCTION_META)];
+  const query = state.actionQuery.trim().toLowerCase();
+  const items = state.analysis.materials.filter((item) => item.spend >= 50 && (state.actionType === "全部" || item.functionalType === state.actionType) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
+  $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${items.length}条</p></div></div>
+    <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${type === "全部" ? state.analysis.materials.filter((m) => m.spend >= 50).length : state.analysis.materials.filter((m) => m.spend >= 50 && m.functionalType === type).length}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
+    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}</td><td>${esc(item.id)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div></section>`;
+  $('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; renderActions(); }));
+  $("#action-search").addEventListener("input", (event) => { state.actionQuery = event.target.value; renderActions(); });
+}
+
+function renderAll() {
+  renderOverview();
+  renderMaterials();
+  renderFunctional();
+  renderActions();
+}
+
+async function handleUpload(file) {
+  if (!file) return;
+  showNotice("正在解析 Excel，请稍候…");
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+    if (!raw.length) throw new Error("文件中没有可导入的数据");
+    const required = ["店铺编码", "素材ID", "日期", "整体展示次数", "整体点击次数", "整体消耗", "净成交金额", "净成交订单数"];
+    const missing = required.filter((field) => !(field in raw[0]));
+    if (missing.length) throw new Error(`缺少字段：${missing.join("、")}`);
+    const rows = raw.map(normalizeExcelRow).filter((row) => row.materialId && /^\d{4}-\d{2}-\d{2}$/.test(row.date));
+    if (!rows.length) throw new Error("未识别到有效的素材ID与日期");
+    await saveRows(rows);
+    state.rows = await readRows();
+    updateBounds(true);
+    applyAnalysis();
+    showNotice(`已写入 ${rows.length.toLocaleString("zh-CN")} 行，本地共保存 ${state.rows.length.toLocaleString("zh-CN")} 行。`);
+  } catch (error) {
+    showNotice(error instanceof Error ? error.message : "Excel 导入失败", true);
+  } finally {
+    elements.file.value = "";
+  }
+}
+
+elements.file.addEventListener("change", (event) => handleUpload(event.target.files?.[0]));
+$("#reanalyze").addEventListener("click", applyAnalysis);
+$("#clear-data").addEventListener("click", async () => {
+  if (!state.rows.length || !confirm("确定清空当前浏览器保存的全部素材数据吗？")) return;
+  await clearRows();
+  state.rows = [];
+  state.analysis = null;
+  state.selected = null;
+  updateBounds(true);
+  showNotice("本地数据已清空。");
+});
+$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
+  $('[data-tab]').forEach((item) => item.classList.toggle("active", item === button));
+  $(".tab-view").forEach((view) => { view.hidden = view.id !== `view-${button.dataset.tab}`; });
+}));
+
+try {
+  state.rows = await readRows();
+  updateBounds(true);
+  if (state.rows.length) applyAnalysis();
+} catch (error) {
+  showNotice("无法读取浏览器本地数据，请确认未禁用 IndexedDB。", true);
+}
+
+</script>
+</body>
+</html>
