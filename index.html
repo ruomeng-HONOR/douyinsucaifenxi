@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="无需登录、数据保存在浏览器本地的短视频素材投放分析看板">
+  <title>素材智析 · 本地公开版</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">DOUYIN MATERIAL OPERATING SYSTEM</div>
+        <h1>素材智析 <span>LOCAL</span></h1>
+        <p>数据仅保存在当前浏览器 · 上传后自动完成净成交经营分析</p>
+      </div>
+      <div class="header-actions">
+        <label class="upload-button" for="excel-file">＋ 上传 Excel</label>
+        <input id="excel-file" class="sr-only" type="file" accept=".xlsx,.xls">
+        <button id="clear-data" class="ghost-button" type="button">清空本地数据</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice" hidden></div>
+
+    <section id="filters" class="filter-strip" hidden>
+      <label>店铺
+        <select id="shop-filter"><option value="all">全部店铺</option></select>
+      </label>
+      <label>开始日期<input id="start-date" type="date"></label>
+      <span class="date-arrow">→</span>
+      <label>结束日期<input id="end-date" type="date"></label>
+      <button id="reanalyze" class="secondary-button" type="button">重新分析</button>
+      <div class="range-meta">指标、评分和画像均按所选店铺与日期计算</div>
+    </section>
+
+    <section id="empty-state" class="empty-state">
+      <div class="empty-mark">↥</div>
+      <h2>上传第一份素材数据</h2>
+      <p>支持原始 Excel 字段，数据只写入当前浏览器，不会上传至服务器。之后再次打开仍可继续分析。</p>
+      <label class="upload-button" for="excel-file">选择 Excel 文件</label>
+    </section>
+
+    <div id="dashboard" hidden>
+      <nav class="section-nav" aria-label="分析模块">
+        <button type="button" data-tab="overview" class="active">经营总览</button>
+        <button type="button" data-tab="materials">素材评分</button>
+        <button type="button" data-tab="functional">功能画像</button>
+        <button type="button" data-tab="actions">行动清单</button>
+      </nav>
+      <section id="view-overview" class="tab-view"></section>
+      <section id="view-materials" class="tab-view" hidden></section>
+      <section id="view-functional" class="tab-view" hidden></section>
+      <section id="view-actions" class="tab-view" hidden></section>
+    </div>
+  </main>
+  <script src="./xlsx.full.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
