@@ -559,7 +559,7 @@ async function clearRows() {
 
 
 const $ = (selector) => document.querySelector(selector);
-const $ = (selector) => [...document.querySelectorAll(selector)];
+const $$ = (selector) => [...document.querySelectorAll(selector)];
 const money = (value) => `¥${Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: value < 100 ? 2 : 0 })}`;
 const fmt = (value, digits = 0) => Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: digits });
 const pct = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
@@ -723,7 +723,7 @@ function renderMaterials() {
   $("#material-search").value = state.materialQuery;
   $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.selected = null; renderMaterials(); });
   $("#material-search").addEventListener("input", (event) => { state.materialQuery = event.target.value; state.selected = null; renderMaterials(); });
-  $("tr[data-material]").forEach((row) => row.addEventListener("click", () => { state.selected = items[Number(row.dataset.material)]; renderMaterials(); }));
+  $$("tr[data-material]").forEach((row) => row.addEventListener("click", () => { state.selected = items[Number(row.dataset.material)]; renderMaterials(); }));
   renderMaterialDetail();
 }
 
@@ -739,7 +739,7 @@ function renderActions() {
   $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${items.length}条</p></div></div>
     <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${type === "全部" ? state.analysis.materials.filter((m) => m.spend >= 50).length : state.analysis.materials.filter((m) => m.spend >= 50 && m.functionalType === type).length}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
     <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}</td><td>${esc(item.id)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div></section>`;
-  $('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; renderActions(); }));
+  $$('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; renderActions(); }));
   $("#action-search").addEventListener("input", (event) => { state.actionQuery = event.target.value; renderActions(); });
 }
 
@@ -786,9 +786,9 @@ $("#clear-data").addEventListener("click", async () => {
   updateBounds(true);
   showNotice("本地数据已清空。");
 });
-$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
-  $('[data-tab]').forEach((item) => item.classList.toggle("active", item === button));
-  $(".tab-view").forEach((view) => { view.hidden = view.id !== `view-${button.dataset.tab}`; });
+$$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
+  $$('[data-tab]').forEach((item) => item.classList.toggle("active", item === button));
+  $$(".tab-view").forEach((view) => { view.hidden = view.id !== `view-${button.dataset.tab}`; });
 }));
 
 try {
