@@ -74,6 +74,17 @@ button{cursor:pointer}
 .bar-track i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:5px}
 .toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .toolbar-group{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.score-title{display:flex;align-items:center;gap:8px}
+.score-help{position:relative;display:inline-flex}
+.score-help-button{display:inline-flex;align-items:center;gap:5px;border:1px solid #ccd5e5;background:#f7f9fe;color:#45608e;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:700}
+.score-help-button:hover,.score-help-button:focus-visible{border-color:var(--blue);color:var(--blue);outline:none;box-shadow:0 0 0 3px #3167ed14}
+.score-help-button i{display:grid;place-content:center;width:14px;height:14px;border-radius:50%;background:#dfe7f8;font-style:normal}
+.score-tooltip{position:absolute;left:0;top:calc(100% + 9px);z-index:20;width:min(430px,calc(100vw - 48px));display:grid;gap:8px;padding:13px 14px;border:1px solid #d9e0ed;border-radius:9px;background:#17233b;color:#f5f7fb;box-shadow:0 14px 38px #10192c3d;font-size:11px;line-height:1.55;white-space:normal;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s ease,transform .15s ease,visibility .15s}
+.score-tooltip:before{content:"";position:absolute;left:20px;top:-6px;width:10px;height:10px;background:#17233b;border-left:1px solid #d9e0ed;border-top:1px solid #d9e0ed;transform:rotate(45deg)}
+.score-tooltip strong{font-size:12px}
+.score-tooltip span{color:#d9e0ed}
+.score-tooltip span b{color:#fff}
+.score-help:hover .score-tooltip,.score-help:focus-within .score-tooltip{opacity:1;visibility:visible;transform:translateY(0)}
 .field input{min-width:210px}
 .field select{min-width:110px}
 .tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
@@ -1346,7 +1357,7 @@ function renderMaterials() {
     <article><span>全部素材</span><strong>${state.analysis.materials.length}</strong><small>当前筛选范围</small></article>
     ${["good", "normal", "poor"].map((tier) => `<article><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))}</small></article>`).join("")}
     </section>
-    <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><b>素材评分明细</b><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
+    <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><div class="score-title"><b>素材评分明细</b><span class="score-help"><button type="button" class="score-help-button" aria-describedby="score-definition">评分定义 <i>?</i></button><span id="score-definition" class="score-tooltip" role="tooltip"><strong>素材评分口径（0–100分）</strong><span><b>分级：</b>优质 ≥ 70分；普通 40–69分；劣质 ＜ 40分。</span><span><b>样本门槛：</b>所选周期消耗不足 ¥50 时记为0分，不进入稳定评分。</span><span><b>相对评价：</b>推商品与推直播分别在同类素材中排名，日期、店铺或账户改变后会重新计算。</span><span><b>核心指标：</b>贝叶斯整体/净ROI、点击率、转化率、净成交、消耗、退款质量、完播率及3秒/5秒留存；使用 ¥200 先验权重降低小样本波动。</span></span></span></div><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
       <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.materialPage, allItems.length, MATERIAL_PAGE_SIZE, "materials")}</div>
       <aside id="material-detail" class="detail-panel"></aside></section>`;
   $("#tier-filter").value = state.materialTier;
