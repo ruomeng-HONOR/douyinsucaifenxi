@@ -6,6 +6,6 @@
   "scripts": {
     "build": "node build-standalone.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check app.js && node --check analysis.js && node --check storage.js"
+    "check": "node --check app.js && node --check analysis.js && node --check storage.js && node --check large-xlsx.js"
   }
 }

@@ -13,7 +13,7 @@
       <div>
         <div class="eyebrow">DOUYIN MATERIAL OPERATING SYSTEM</div>
         <h1>素材智析 <span>LOCAL</span></h1>
-        <p>数据仅保存在当前浏览器 · 上传后自动完成净成交经营分析</p>
+        <p>数据仅保存在当前浏览器 · 自动识别推商品与推直播报表并分别建模</p>
       </div>
       <div class="header-actions">
         <label class="upload-button" for="excel-file">＋ 上传 Excel</label>
@@ -25,20 +25,26 @@
     <div id="notice" class="notice" hidden></div>
 
     <section id="filters" class="filter-strip" hidden>
+      <label>投放类型
+        <select id="mode-filter"><option value="all">全部类型</option></select>
+      </label>
       <label>店铺
         <select id="shop-filter"><option value="all">全部店铺</option></select>
       </label>
-      <label>开始日期<input id="start-date" type="date"></label>
+      <label>千川账户
+        <select id="account-filter"><option value="all">全部账户</option></select>
+      </label>
+      <label>开始月份<input id="start-date" type="month"></label>
       <span class="date-arrow">→</span>
-      <label>结束日期<input id="end-date" type="date"></label>
+      <label>结束月份<input id="end-date" type="month"></label>
       <button id="reanalyze" class="secondary-button" type="button">重新分析</button>
-      <div class="range-meta">指标、评分和画像均按所选店铺与日期计算</div>
+      <div class="range-meta">推商品与推直播使用各自基准评分</div>
     </section>
 
     <section id="empty-state" class="empty-state">
       <div class="empty-mark">↥</div>
       <h2>上传第一份素材数据</h2>
-      <p>支持原始 Excel 字段，数据只写入当前浏览器，不会上传至服务器。之后再次打开仍可继续分析。</p>
+      <p>支持同一文件中的“推商品”和“推直播”工作表，自动兼容“展示/展现”等字段差异。数据只写入当前浏览器，不会上传至服务器。</p>
       <label class="upload-button" for="excel-file">选择 Excel 文件</label>
     </section>
 

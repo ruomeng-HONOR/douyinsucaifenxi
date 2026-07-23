@@ -1,5 +1,6 @@
-import { analyzeRows, buildTrend, FUNCTION_META, normalizeExcelRow, TIER_LABELS } from "./analysis.js";
-import { clearRows, readRows, saveRows } from "./storage.js";
+import { analyzeRows, buildTrend, detectReportType, FUNCTION_META, normalizeExcelRow, normalizeStoredRows, REPORT_META, TIER_LABELS, validateReportHeaders } from "./analysis.js";
+import { clearRows, readMaterialRows, readMonthlyRows, readRows, saveMonthlyRows, saveRows } from "./storage.js";
+import { aggregateMonthlyRows, readLargeXlsx } from "./large-xlsx.js";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -23,7 +24,9 @@ const elements = {
   file: $("#excel-file"),
   notice: $("#notice"),
   filters: $("#filters"),
+  mode: $("#mode-filter"),
   shop: $("#shop-filter"),
+  account: $("#account-filter"),
   start: $("#start-date"),
   end: $("#end-date"),
   empty: $("#empty-state"),
@@ -38,11 +41,15 @@ function showNotice(message, error = false) {
 }
 
 function updateBounds(resetDates = false) {
+  const modes = [...new Set(state.rows.map((row) => row.deliveryMode || "推商品").filter(Boolean))].sort();
   const shops = [...new Set(state.rows.map((row) => row.shopCode).filter(Boolean))].sort();
-  const dates = state.rows.map((row) => row.date).filter(Boolean).sort();
-  const minDate = dates[0] || "";
-  const maxDate = dates.at(-1) || "";
+  const accounts = [...new Set(state.rows.map((row) => row.qianchuanId).filter(Boolean))].sort();
+  const months = state.rows.map((row) => row.month || row.date?.slice(0, 7)).filter(Boolean).sort();
+  const minDate = months[0] || "";
+  const maxDate = months.at(-1) || "";
+  elements.mode.innerHTML = `<option value="all">全部类型</option>${modes.map((mode) => `<option value="${esc(mode)}">${esc(mode)}</option>`).join("")}`;
   elements.shop.innerHTML = `<option value="all">全部店铺</option>${shops.map((shop) => `<option value="${esc(shop)}">${esc(shop)}</option>`).join("")}`;
+  elements.account.innerHTML = `<option value="all">全部账户</option>${accounts.map((account) => `<option value="${esc(account)}">${esc(account)}</option>`).join("")}`;
   if (resetDates || !elements.start.value) elements.start.value = minDate;
   if (resetDates || !elements.end.value) elements.end.value = maxDate;
   elements.start.min = minDate;
@@ -55,13 +62,41 @@ function updateBounds(resetDates = false) {
 }
 
 function applyAnalysis() {
+  const mode = elements.mode.value;
   const shop = elements.shop.value;
+  const account = elements.account.value;
   const start = elements.start.value;
   const end = elements.end.value;
-  state.filteredRows = state.rows.filter((row) => (shop === "all" || row.shopCode === shop) && row.date >= start && row.date <= end);
+  state.filteredRows = state.rows.filter((row) => (mode === "all" || row.deliveryMode === mode)
+    && (shop === "all" || row.shopCode === shop)
+    && (account === "all" || row.qianchuanId === account)
+    && (row.month || row.date.slice(0, 7)) >= start
+    && (row.month || row.date.slice(0, 7)) <= end);
   state.analysis = analyzeRows(state.filteredRows);
   state.selected = null;
   renderAll();
+}
+
+function reportBadge(mode) {
+  const meta = REPORT_META[mode] || REPORT_META["推商品"];
+  return `<span class="mode-badge" style="--mode:${meta.color}">${esc(mode)}</span>`;
+}
+
+function compactDailyRow(row) {
+  return {
+    key: row.key,
+    materialKey: row.materialKey,
+    schemaVersion: row.schemaVersion,
+    deliveryMode: row.deliveryMode,
+    shopCode: row.shopCode,
+    qianchuanId: row.qianchuanId,
+    materialId: row.materialId,
+    date: row.date,
+    spend: row.spend,
+    grossAmount: row.grossAmount,
+    netAmount: row.netAmount,
+    netOrders: row.netOrders,
+  };
 }
 
 function renderMetrics() {
@@ -78,7 +113,7 @@ function renderMetrics() {
     <article><span>整体 / 净订单</span><strong>${fmt(s.grossOrders)}</strong><small>净成交 ${fmt(s.netOrders)} 单</small></article>
     <article><span>达到评分门槛</span><strong>${a.thresholds.eligible}</strong><small>消耗 ≥ ¥50</small></article>
     <article><span>优质素材贡献</span><strong>${a.tiers.good} 条</strong><small>消耗${pct(goodSpend / (s.spend || 1))} · 净成交${pct(goodNet / (s.netAmount || 1))}</small></article>
-    <article><span>本地日级记录</span><strong>${fmt(state.filteredRows.length)}</strong><small>${esc(elements.start.value)} 至 ${esc(elements.end.value)}</small></article>
+    <article><span>视频播放 / 完播率</span><strong>${fmt(s.videoPlays)}</strong><small>完播 ${pct(s.videoCompletionRate)} · 3秒 ${pct(s.threeSecondRate)}</small></article>
   </section>`;
 }
 
@@ -104,14 +139,15 @@ function renderOverview() {
   const maxCategory = Math.max(...a.categories.map((item) => item.spend), 1);
   $("#view-overview").innerHTML = `${renderMetrics()}
     <section class="insight-grid">
-      <article><b>预算聚焦</b><p>${a.tiers.good}条优质素材贡献${pct(a.materials.filter((m) => m.tier === "good").reduce((sum, m) => sum + m.netAmount, 0) / (s.netAmount || 1))}净成交，预算应向稳定高分素材倾斜。</p></article>
+      <article><b>双模型评分</b><p>推商品更侧重商品成交与退款质量；推直播提高点击、完播和前5秒留存权重，两类素材不共用排名基准。</p></article>
       <article><b>退款侵蚀</b><p>整体ROI ${s.grossRoi.toFixed(2)} 降至净ROI ${s.netRoi.toFixed(2)}，退款造成 ${money(s.refundLoss)} 成交损失。</p></article>
-      <article><b>评分可信度</b><p>采用¥${a.thresholds.priorWeight}先验权重收缩小样本ROI，减少偶然成交导致的虚高。</p></article>
+      <article><b>评分可信度</b><p>采用¥${a.thresholds.priorWeight}先验权重收缩小样本ROI，并纳入完播、3秒和5秒播放质量。</p></article>
     </section>
     <section class="two-column">
       <article class="panel"><div class="panel-head"><div><h2>月度经营趋势</h2><p>消耗柱 · 整体ROI线 · 净ROI线</p></div><div class="chart-legend"><i class="spend"></i>消耗<i class="gross"></i>整体ROI<i class="net"></i>净ROI</div></div>${monthlyChart(a.monthly)}</article>
       <article class="panel"><div class="panel-head"><div><h2>等级分布</h2><p>按当前筛选范围重新计算</p></div></div><table><thead><tr><th>等级</th><th>素材数</th><th>占比</th></tr></thead><tbody>${["good", "normal", "poor"].map((tier) => `<tr><td><span class="tier ${tier}">${TIER_LABELS[tier]}</span></td><td>${a.tiers[tier]}</td><td>${pct(a.tiers[tier] / (a.materials.length || 1))}</td></tr>`).join("")}</tbody></table></article>
     </section>
+    <section class="panel"><div class="panel-head"><div><h2>投放类型表现</h2><p>两类报表分别评分，经营结果在此汇总对比</p></div></div><div class="mode-summary">${a.modeSummaries.map((item) => `<article style="--mode:${REPORT_META[item.mode].color}"><div>${reportBadge(item.mode)}<b>${item.count}条素材</b></div><span>消耗<strong>${money(item.spend)}</strong></span><span>净ROI<strong>${item.netRoi.toFixed(2)}</strong></span><span>完播率<strong>${pct(item.videoCompletionRate)}</strong></span><span>有效评分<strong>${item.eligible}</strong></span></article>`).join("")}</div></section>
     <section class="panel"><div class="panel-head"><div><h2>品类经营表现</h2><p>根据素材名称关键词自动归类</p></div></div><div class="category-list">${a.categories.map((item) => `<div class="category-row"><div class="category-name"><b>${esc(item.name)}</b><small>${item.count}条</small></div><div class="bar-track"><i style="width:${item.spend / maxCategory * 100}%"></i></div><span>${money(item.spend)}</span><span>净ROI ${item.netRoi.toFixed(2)}</span><span>退款 ${pct(item.refundRate)}</span></div>`).join("")}</div></section>`;
 }
 
@@ -137,7 +173,7 @@ function lifecycleChart(data) {
   </svg>`;
 }
 
-function renderMaterialDetail() {
+async function renderMaterialDetail() {
   const container = $("#material-detail");
   if (!container) return;
   const item = state.selected;
@@ -145,11 +181,22 @@ function renderMaterialDetail() {
     container.innerHTML = `<div class="detail-empty"><strong>选择一条素材</strong><span>查看评分理由、经营指标和投放生命周期</span></div>`;
     return;
   }
-  const trend = buildTrend(state.filteredRows, item);
-  container.innerHTML = `<div class="detail-top"><span class="tier ${item.tier}">${TIER_LABELS[item.tier]} · ${item.score}分</span><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></div>
-    <h2>${esc(item.name)}</h2><div class="material-id">店铺 ${esc(item.shopCode)} · 素材ID ${esc(item.id)}</div>
+  container.innerHTML = `<div class="detail-empty"><strong>正在读取日趋势…</strong><span>仅加载当前素材，避免大型报表占满内存</span></div>`;
+  const selectedKey = item.materialKey;
+  let dailyRows = [];
+  try {
+    dailyRows = await readMaterialRows(item, `${elements.start.value}-01`, `${elements.end.value}-31`);
+  } catch (error) {
+    showNotice("无法读取该素材的日趋势数据", true);
+  }
+  if (state.selected?.materialKey !== selectedKey) return;
+  const trend = buildTrend(dailyRows, item);
+  const settlementRows = [[7, item.settlement7Roi, item.settlement7Rate], [14, item.settlement14Roi, item.settlement14Rate], [30, item.settlement30Roi, item.settlement30Rate], [90, item.settlement90Roi, item.settlement90Rate]];
+  container.innerHTML = `<div class="detail-top"><span class="tier ${item.tier}">${TIER_LABELS[item.tier]} · ${item.score}分</span><span>${reportBadge(item.deliveryMode)} <span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></span></div>
+    <h2>${esc(item.name)}</h2><div class="material-id">店铺 ${esc(item.shopCode)} · 千川ID ${esc(item.qianchuanId || "-")} · 素材ID ${esc(item.id)}${item.videoType ? ` · ${esc(item.videoType)}` : ""}</div>
     <div class="decision-note"><b>分析理由：</b>${esc(item.reason)}<br><b>建议：</b>${esc(item.action)}</div>
-    <div class="detail-metrics"><div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>净ROI</span><strong>${item.netRoi.toFixed(2)}</strong></div><div><span>净成交</span><strong>${money(item.netAmount)}</strong></div><div><span>退款损失率</span><strong>${pct(item.refund)}</strong></div></div>
+    <div class="detail-metrics"><div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>净ROI</span><strong>${item.netRoi.toFixed(2)}</strong></div><div><span>净成交</span><strong>${money(item.netAmount)}</strong></div><div><span>退款损失率</span><strong>${pct(item.refund)}</strong></div><div><span>视频播放</span><strong>${fmt(item.videoPlays)}</strong></div><div><span>完播 / 3秒</span><strong>${pct(item.videoCompletionRate)} / ${pct(item.threeSecondRate)}</strong></div><div><span>平均观看</span><strong>${fmt(item.avgWatchTime, 2)}秒</strong></div><div><span>内容质量分</span><strong>${item.contentScore.toFixed(0)}</strong></div></div>
+    <div class="settlement-grid">${settlementRows.map(([days, roi, rate]) => `<div><span>${days}日结算</span><b>ROI ${roi.toFixed(2)}</b><small>GMV结算率 ${pct(rate)}</small></div>`).join("")}</div>
     <div class="panel-head"><div><h2>素材投放趋势</h2><p>日消耗柱 · 7日滚动净ROI线 · 顶部生命周期阶段</p></div></div>${lifecycleChart(trend)}`;
 }
 
@@ -160,19 +207,19 @@ function renderMaterials() {
     ${["good", "normal", "poor"].map((tier) => `<article><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))}</small></article>`).join("")}
     </section>
     <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><b>素材评分明细</b><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
-      <div class="table-wrap"><table><thead><tr><th>素材</th><th>功能画像</th><th>评分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)}</small></td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div></div>
       <aside id="material-detail" class="detail-panel"></aside></section>`;
   $("#tier-filter").value = state.materialTier;
   $("#material-search").value = state.materialQuery;
   $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.selected = null; renderMaterials(); });
   $("#material-search").addEventListener("input", (event) => { state.materialQuery = event.target.value; state.selected = null; renderMaterials(); });
   $$("tr[data-material]").forEach((row) => row.addEventListener("click", () => { state.selected = items[Number(row.dataset.material)]; renderMaterials(); }));
-  renderMaterialDetail();
+  void renderMaterialDetail();
 }
 
 function renderFunctional() {
   $("#view-functional").innerHTML = `<section class="function-grid">${state.analysis.functions.map((item) => { const meta = FUNCTION_META[item.type]; return `<article style="--func:${meta.color}"><div class="function-head"><i></i><h2>${esc(item.type)}</h2><b>${item.count}条</b></div><p>${esc(meta.description)}</p><div class="function-metrics"><span>素材占比<b>${pct(item.share)}</b></span><span>消耗占比<b>${pct(item.spendShare)}</b></span><span>净ROI<b>${item.netRoi.toFixed(2)}</b></span><span>净成交占比<b>${pct(item.netShare)}</b></span><span>退款损失率<b>${pct(item.refundRate)}</b></span></div></article>`; }).join("")}</section>
-    <section class="panel"><div class="panel-head"><div><h2>功能画像判定逻辑</h2><p>画像用于明确运营角色，不等同于优质、普通、劣质评分</p></div></div><p>爆款型：点击、转化、净ROI同时较高；精品型：低消耗、高净ROI；引流型：点击较高但转化偏低；损耗型：消耗较高但净ROI偏低；误导型：点击较高且退款损失率达到15%以上。</p></section>`;
+    <section class="panel"><div class="panel-head"><div><h2>功能画像判定逻辑</h2><p>两类报表的阈值分别计算，画像名称保持统一</p></div></div><p>爆款型：点击、转化、净ROI同时较高；精品型：低消耗、高净ROI；引流型：点击较高但转化偏低；损耗型：消耗较高但净ROI偏低；误导型：点击较高且退款损失率达到15%以上。综合评分额外纳入完播率、3秒和5秒播放率。</p></section>`;
 }
 
 function renderActions() {
@@ -181,7 +228,7 @@ function renderActions() {
   const items = state.analysis.materials.filter((item) => item.spend >= 50 && (state.actionType === "全部" || item.functionalType === state.actionType) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
   $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${items.length}条</p></div></div>
     <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${type === "全部" ? state.analysis.materials.filter((m) => m.spend >= 50).length : state.analysis.materials.filter((m) => m.spend >= 50 && m.functionalType === type).length}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
-    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}</td><td>${esc(item.id)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div></section>`;
+    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>投放类型</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}<small>${esc(item.qianchuanId || "-")}</small></td><td>${esc(item.id)}</td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div></section>`;
   $$('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; renderActions(); }));
   $("#action-search").addEventListener("input", (event) => { state.actionQuery = event.target.value; renderActions(); });
 }
@@ -197,20 +244,43 @@ async function handleUpload(file) {
   if (!file) return;
   showNotice("正在解析 Excel，请稍候…");
   try {
-    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
-    if (!raw.length) throw new Error("文件中没有可导入的数据");
-    const required = ["店铺编码", "素材ID", "日期", "整体展示次数", "整体点击次数", "整体消耗", "净成交金额", "净成交订单数"];
-    const missing = required.filter((field) => !(field in raw[0]));
-    if (missing.length) throw new Error(`缺少字段：${missing.join("、")}`);
-    const rows = raw.map(normalizeExcelRow).filter((row) => row.materialId && /^\d{4}-\d{2}-\d{2}$/.test(row.date));
-    if (!rows.length) throw new Error("未识别到有效的素材ID与日期");
-    await saveRows(rows);
-    state.rows = await readRows();
+    let rows = [];
+    let monthlyRows = [];
+    let counts = {};
+    if (file.size >= 50 * 1024 * 1024) {
+      ({ monthlyRows, counts } = await readLargeXlsx(file, {
+        collectRows: false,
+        onProgress: (message) => showNotice(message),
+        onBatch: (batch) => saveRows(batch.map(compactDailyRow), (saved, total) => showNotice(`正在保存当前批次：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 行…`)),
+      }));
+    } else {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, dense: true });
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const raw = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true });
+        if (!raw.length) continue;
+        const headers = Object.keys(raw[0]);
+        const reportType = detectReportType(headers, sheetName);
+        if (!reportType) continue;
+        const missing = validateReportHeaders(headers);
+        if (missing.length) throw new Error(`${sheetName}缺少字段：${missing.join("、")}`);
+        const normalized = raw.map((row) => normalizeExcelRow(row, reportType)).filter((row) => !row.isSummary && row.materialId && /^\d{4}-\d{2}-\d{2}$/.test(row.date));
+        rows.push(...normalized);
+        counts[reportType] = (counts[reportType] || 0) + normalized.length;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      monthlyRows = aggregateMonthlyRows(rows);
+      await saveRows(rows.map(compactDailyRow), (saved, total) => showNotice(`正在保存到浏览器：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 行…`));
+    }
+    const importedCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    if (!importedCount || !monthlyRows.length) throw new Error("未识别到有效的素材ID与日期");
+    await saveMonthlyRows(monthlyRows, (saved, total) => showNotice(`正在保存月度汇总：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 条…`));
+    rows = [];
+    state.rows = normalizeStoredRows(await readMonthlyRows());
     updateBounds(true);
     applyAnalysis();
-    showNotice(`已写入 ${rows.length.toLocaleString("zh-CN")} 行，本地共保存 ${state.rows.length.toLocaleString("zh-CN")} 行。`);
+    const detail = Object.entries(counts).map(([mode, count]) => `${mode} ${count.toLocaleString("zh-CN")}行`).join("，");
+    showNotice(`已导入${detail}；生成月度素材记录 ${state.rows.length.toLocaleString("zh-CN")} 条。`);
   } catch (error) {
     showNotice(error instanceof Error ? error.message : "Excel 导入失败", true);
   } finally {
@@ -235,7 +305,14 @@ $$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
 }));
 
 try {
-  state.rows = await readRows();
+  state.rows = normalizeStoredRows(await readMonthlyRows());
+  if (!state.rows.length) {
+    const legacyRows = normalizeStoredRows(await readRows());
+    if (legacyRows.length) {
+      state.rows = aggregateMonthlyRows(legacyRows);
+      await saveMonthlyRows(state.rows);
+    }
+  }
   updateBounds(true);
   if (state.rows.length) applyAnalysis();
 } catch (error) {
