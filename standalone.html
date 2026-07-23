@@ -84,6 +84,13 @@ button{cursor:pointer}
 .table-panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
 .table-head{padding:18px;border-bottom:1px solid var(--line)}
 .table-wrap{overflow:auto;max-height:660px}
+.pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line);background:#fafbfc;color:var(--muted);font-size:11px}
+.pagination>div{display:flex;align-items:center;gap:5px}
+.pagination button{min-width:32px;height:30px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+.pagination button:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+.pagination button.active{border-color:var(--blue);background:var(--blue);color:#fff}
+.pagination button:disabled{cursor:not-allowed;opacity:.45}
+.pagination i{padding:0 2px;font-style:normal}
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}
 th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right}
 th{position:sticky;top:0;background:#fafbfc;color:var(--muted);font-size:10px;letter-spacing:.04em;z-index:1}
@@ -139,7 +146,7 @@ tbody tr.selected{background:#eef3ff;box-shadow:inset 3px 0 var(--blue)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [hidden]{display:none!important}
 @media(max-width:1180px){.metric-grid{grid-template-columns:repeat(2,1fr)}.two-column,.workspace{grid-template-columns:1fr}.function-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:130px minmax(100px,1fr) 95px 95px}.category-row>span:last-child{display:none}}
-@media(max-width:760px){.app-shell{padding:20px 14px 40px}.topbar{align-items:flex-start}.header-actions{align-items:flex-end;flex-direction:column}.filter-strip{align-items:stretch;flex-wrap:wrap}.filter-strip label{flex:1}.range-meta,.date-arrow{display:none}.insight-grid,.function-grid,.mode-summary{grid-template-columns:1fr}.mode-summary article{grid-template-columns:repeat(2,1fr)}.tier-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:100px minmax(90px,1fr) 90px}.category-row>span:nth-last-child(-n+2){display:none}.detail-metrics,.settlement-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.toolbar-group,.field,.field input,.field select{width:100%}}
+@media(max-width:760px){.app-shell{padding:20px 14px 40px}.topbar{align-items:flex-start}.header-actions{align-items:flex-end;flex-direction:column}.filter-strip{align-items:stretch;flex-wrap:wrap}.filter-strip label{flex:1}.range-meta,.date-arrow{display:none}.insight-grid,.function-grid,.mode-summary{grid-template-columns:1fr}.mode-summary article{grid-template-columns:repeat(2,1fr)}.tier-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:100px minmax(90px,1fr) 90px}.category-row>span:nth-last-child(-n+2){display:none}.detail-metrics,.settlement-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.toolbar-group,.field,.field input,.field select{width:100%}.pagination{align-items:flex-start;flex-direction:column}.pagination>div{max-width:100%;overflow:auto}}
 @media(max-width:470px){.topbar{flex-direction:column}.header-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap}.metric-grid,.tier-grid{grid-template-columns:1fr}.section-nav{width:100%}.section-nav button{flex:1;padding:8px 10px}.category-row{grid-template-columns:90px 1fr}.category-row>span{display:none!important}}
 
 </style>
@@ -1088,6 +1095,16 @@ const money = (value) => `¥${Number(value || 0).toLocaleString("zh-CN", { maxim
 const fmt = (value, digits = 0) => Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: digits });
 const pct = (value) => `${(Number(value || 0) * 100).toFixed(1)}%`;
 const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+const debounce = (callback, delay = 300) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => callback(...args), delay);
+  };
+};
+const MATERIAL_PAGE_SIZE = 100;
+const ACTION_PAGE_SIZE = 100;
+const ANALYSIS_CACHE_LIMIT = 12;
 
 const state = {
   rows: [],
@@ -1096,8 +1113,13 @@ const state = {
   selected: null,
   materialTier: "all",
   materialQuery: "",
+  materialPage: 1,
   actionType: "全部",
   actionQuery: "",
+  actionPage: 1,
+  activeTab: "overview",
+  renderedTabs: new Set(),
+  analysisCache: new Map(),
 };
 
 const elements = {
@@ -1147,14 +1169,32 @@ function applyAnalysis() {
   const account = elements.account.value;
   const start = elements.start.value;
   const end = elements.end.value;
-  state.filteredRows = state.rows.filter((row) => (mode === "all" || row.deliveryMode === mode)
-    && (shop === "all" || row.shopCode === shop)
-    && (account === "all" || row.qianchuanId === account)
-    && (row.month || row.date.slice(0, 7)) >= start
-    && (row.month || row.date.slice(0, 7)) <= end);
-  state.analysis = analyzeRows(state.filteredRows);
+  const cacheKey = [mode, shop, account, start, end].join("::");
+  const cached = state.analysisCache.get(cacheKey);
+  const startedAt = performance.now();
+  if (cached) {
+    state.analysisCache.delete(cacheKey);
+    state.analysisCache.set(cacheKey, cached);
+    state.analysis = cached;
+  } else {
+    state.filteredRows = state.rows.filter((row) => (mode === "all" || row.deliveryMode === mode)
+      && (shop === "all" || row.shopCode === shop)
+      && (account === "all" || row.qianchuanId === account)
+      && (row.month || row.date.slice(0, 7)) >= start
+      && (row.month || row.date.slice(0, 7)) <= end);
+    state.analysis = analyzeRows(state.filteredRows);
+    state.analysisCache.set(cacheKey, state.analysis);
+    while (state.analysisCache.size > ANALYSIS_CACHE_LIMIT) {
+      state.analysisCache.delete(state.analysisCache.keys().next().value);
+    }
+  }
   state.selected = null;
-  renderAll();
+  state.materialPage = 1;
+  state.actionPage = 1;
+  state.renderedTabs.clear();
+  renderActiveTab(true);
+  const elapsed = Math.round(performance.now() - startedAt);
+  showNotice(cached ? `已读取分析缓存，耗时 ${elapsed}ms。` : `分析完成，耗时 ${(elapsed / 1000).toFixed(1)}秒；再次使用相同筛选将直接读取缓存。`);
 }
 
 function reportBadge(mode) {
@@ -1236,6 +1276,22 @@ function filteredMaterials() {
   return state.analysis.materials.filter((item) => (state.materialTier === "all" || item.tier === state.materialTier) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
 }
 
+function paginationMarkup(page, total, pageSize, target) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages <= 1) return `<div class="pagination"><span>共 ${total.toLocaleString("zh-CN")} 条</span></div>`;
+  const candidates = [1, page - 1, page, page + 1, pages]
+    .filter((value) => value >= 1 && value <= pages)
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .sort((a, b) => a - b);
+  let previous = 0;
+  const buttons = candidates.map((value) => {
+    const gap = previous && value - previous > 1 ? "<i>…</i>" : "";
+    previous = value;
+    return `${gap}<button type="button" data-page-target="${target}" data-page="${value}" class="${value === page ? "active" : ""}">${value}</button>`;
+  }).join("");
+  return `<div class="pagination"><span>共 ${total.toLocaleString("zh-CN")} 条 · 第 ${page}/${pages} 页</span><div><button type="button" data-page-target="${target}" data-page="${page - 1}" ${page <= 1 ? "disabled" : ""}>上一页</button>${buttons}<button type="button" data-page-target="${target}" data-page="${page + 1}" ${page >= pages ? "disabled" : ""}>下一页</button></div></div>`;
+}
+
 function lifecycleChart(data) {
   if (!data.length) return `<div class="chart-empty">所选时间暂无投放记录</div>`;
   const width = 820, height = 305, left = 50, right = 44, top = 38, bottom = 36;
@@ -1281,20 +1337,36 @@ async function renderMaterialDetail() {
 }
 
 function renderMaterials() {
-  const items = filteredMaterials();
+  const allItems = filteredMaterials();
+  const pages = Math.max(1, Math.ceil(allItems.length / MATERIAL_PAGE_SIZE));
+  state.materialPage = Math.min(Math.max(1, state.materialPage), pages);
+  const offset = (state.materialPage - 1) * MATERIAL_PAGE_SIZE;
+  const items = allItems.slice(offset, offset + MATERIAL_PAGE_SIZE);
   $("#view-materials").innerHTML = `<section class="tier-grid">
     <article><span>全部素材</span><strong>${state.analysis.materials.length}</strong><small>当前筛选范围</small></article>
     ${["good", "normal", "poor"].map((tier) => `<article><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))}</small></article>`).join("")}
     </section>
     <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><b>素材评分明细</b><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
-      <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.materialPage, allItems.length, MATERIAL_PAGE_SIZE, "materials")}</div>
       <aside id="material-detail" class="detail-panel"></aside></section>`;
   $("#tier-filter").value = state.materialTier;
   $("#material-search").value = state.materialQuery;
-  $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.selected = null; renderMaterials(); });
-  $("#material-search").addEventListener("input", (event) => { state.materialQuery = event.target.value; state.selected = null; renderMaterials(); });
-  $$("tr[data-material]").forEach((row) => row.addEventListener("click", () => { state.selected = items[Number(row.dataset.material)]; renderMaterials(); }));
+  $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.materialPage = 1; state.selected = null; renderMaterials(); });
+  const applyMaterialSearch = debounce((value) => { state.materialQuery = value; state.materialPage = 1; state.selected = null; renderMaterials(); });
+  $("#material-search").addEventListener("input", (event) => applyMaterialSearch(event.target.value));
+  $$("tr[data-material]").forEach((row) => row.addEventListener("click", () => {
+    state.selected = items[Number(row.dataset.material)];
+    $$("tr[data-material]").forEach((item) => item.classList.toggle("selected", item === row));
+    void renderMaterialDetail();
+  }));
+  $$('[data-page-target="materials"]').forEach((button) => button.addEventListener("click", () => {
+    if (button.disabled) return;
+    state.materialPage = Number(button.dataset.page);
+    state.selected = null;
+    renderMaterials();
+  }));
   void renderMaterialDetail();
+  state.renderedTabs.add("materials");
 }
 
 function renderFunctional() {
@@ -1305,19 +1377,38 @@ function renderFunctional() {
 function renderActions() {
   const types = ["全部", ...Object.keys(FUNCTION_META)];
   const query = state.actionQuery.trim().toLowerCase();
-  const items = state.analysis.materials.filter((item) => item.spend >= 50 && (state.actionType === "全部" || item.functionalType === state.actionType) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
-  $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${items.length}条</p></div></div>
-    <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${type === "全部" ? state.analysis.materials.filter((m) => m.spend >= 50).length : state.analysis.materials.filter((m) => m.spend >= 50 && m.functionalType === type).length}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
-    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>投放类型</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}<small>${esc(item.qianchuanId || "-")}</small></td><td>${esc(item.id)}</td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div></section>`;
-  $$('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; renderActions(); }));
-  $("#action-search").addEventListener("input", (event) => { state.actionQuery = event.target.value; renderActions(); });
+  const eligible = state.analysis.materials.filter((item) => item.spend >= 50);
+  const counts = new Map([["全部", eligible.length]]);
+  for (const item of eligible) counts.set(item.functionalType, (counts.get(item.functionalType) || 0) + 1);
+  const allItems = eligible.filter((item) => (state.actionType === "全部" || item.functionalType === state.actionType) && (!query || item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)));
+  const pages = Math.max(1, Math.ceil(allItems.length / ACTION_PAGE_SIZE));
+  state.actionPage = Math.min(Math.max(1, state.actionPage), pages);
+  const offset = (state.actionPage - 1) * ACTION_PAGE_SIZE;
+  const items = allItems.slice(offset, offset + ACTION_PAGE_SIZE);
+  $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${allItems.length}条</p></div></div>
+    <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${counts.get(type) || 0}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
+    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>投放类型</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}<small>${esc(item.qianchuanId || "-")}</small></td><td>${esc(item.id)}</td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.actionPage, allItems.length, ACTION_PAGE_SIZE, "actions")}</section>`;
+  $$('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; state.actionPage = 1; renderActions(); }));
+  const applyActionSearch = debounce((value) => { state.actionQuery = value; state.actionPage = 1; renderActions(); });
+  $("#action-search").addEventListener("input", (event) => applyActionSearch(event.target.value));
+  $$('[data-page-target="actions"]').forEach((button) => button.addEventListener("click", () => {
+    if (button.disabled) return;
+    state.actionPage = Number(button.dataset.page);
+    renderActions();
+  }));
+  state.renderedTabs.add("actions");
 }
 
-function renderAll() {
-  renderOverview();
-  renderMaterials();
-  renderFunctional();
-  renderActions();
+function renderActiveTab(force = false) {
+  if (!state.analysis || (!force && state.renderedTabs.has(state.activeTab))) return;
+  const renderers = {
+    overview: renderOverview,
+    materials: renderMaterials,
+    functional: renderFunctional,
+    actions: renderActions,
+  };
+  renderers[state.activeTab]?.();
+  state.renderedTabs.add(state.activeTab);
 }
 
 async function handleUpload(file) {
@@ -1357,6 +1448,7 @@ async function handleUpload(file) {
     await saveMonthlyRows(monthlyRows, (saved, total) => showNotice(`正在保存月度汇总：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 条…`));
     rows = [];
     state.rows = normalizeStoredRows(await readMonthlyRows());
+    state.analysisCache.clear();
     updateBounds(true);
     applyAnalysis();
     const detail = Object.entries(counts).map(([mode, count]) => `${mode} ${count.toLocaleString("zh-CN")}行`).join("，");
@@ -1376,12 +1468,16 @@ $("#clear-data").addEventListener("click", async () => {
   state.rows = [];
   state.analysis = null;
   state.selected = null;
+  state.analysisCache.clear();
+  state.renderedTabs.clear();
   updateBounds(true);
   showNotice("本地数据已清空。");
 });
 $$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
+  state.activeTab = button.dataset.tab;
   $$('[data-tab]').forEach((item) => item.classList.toggle("active", item === button));
   $$(".tab-view").forEach((view) => { view.hidden = view.id !== `view-${button.dataset.tab}`; });
+  renderActiveTab();
 }));
 
 try {
