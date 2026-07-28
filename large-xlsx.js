@@ -185,7 +185,7 @@ async function streamSheet(file, entry, sharedStrings, sheetName, onRow, onProgr
   await reader.cancel();
 }
 
-export async function readLargeXlsx(file, { onProgress, onBatch, collectRows = true, maxRowsPerSheet = Infinity } = {}) {
+export async function readLargeXlsx(file, { onProgress, onBatch, collectRows = true, maxRowsPerSheet = Infinity, allowedPlatform = "" } = {}) {
   onProgress?.("正在读取大型Excel目录…");
   const entries = await zipEntries(file);
   const sharedEntry = entries.get("xl/sharedStrings.xml");
@@ -198,17 +198,22 @@ export async function readLargeXlsx(file, { onProgress, onBatch, collectRows = t
   let batch = [];
   const counts = {};
   for (const sheet of sheets) {
-    if (!/推商品|推直播/.test(sheet.name)) continue;
     let headers = [];
     let reportType = "";
     await streamSheet(file, entries.get(sheet.target), sharedStrings, sheet.name, async (cells, rowNumber) => {
       if (rowNumber === 1) {
         headers = cells.map((value) => String(value ?? "").trim());
         reportType = detectReportType(headers, sheet.name);
-        const missing = validateReportHeaders(headers);
+        if (!reportType) return;
+        const reportPlatform = reportType === "淘系短视频" ? "淘系" : "抖音";
+        if (allowedPlatform && reportPlatform !== allowedPlatform) {
+          throw new Error(`当前是${allowedPlatform === "淘系" ? "淘宝" : "抖音"}系统，请上传对应平台的报表`);
+        }
+        const missing = validateReportHeaders(headers, reportType);
         if (missing.length) throw new Error(`${sheet.name}缺少字段：${missing.join("、")}`);
         return;
       }
+      if (!reportType) return;
       const raw = {};
       headers.forEach((header, index) => { if (header) raw[header] = cells[index] ?? ""; });
       const normalized = normalizeExcelRow(raw, reportType);

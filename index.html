@@ -3,48 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="无需登录、数据保存在浏览器本地的短视频素材投放分析看板">
-  <title>素材智析 · 本地公开版</title>
-  <link rel="stylesheet" href="./styles.css?v=20260723-7">
+  <meta name="description" content="抖音与淘宝短视频素材的本地独立分析系统">
+  <title>双平台视频素材分析系统</title>
+  <link rel="stylesheet" href="./styles.css?v=20260728-1">
 </head>
 <body>
-  <main class="app-shell">
+  <section id="system-home" class="system-home">
+    <div class="home-shell">
+      <div class="home-brand">
+        <div class="eyebrow">VIDEO MATERIAL INTELLIGENCE</div>
+        <h1>双平台视频素材分析系统</h1>
+        <p>抖音与淘宝使用独立的数据空间、筛选条件、评分模型和经营看板。</p>
+      </div>
+      <div class="system-cards">
+        <button type="button" class="system-card douyin" data-enter-system="douyin">
+          <span class="system-icon">抖</span>
+          <small>DOUYIN WORKSPACE</small>
+          <strong>抖音视频素材分析</strong>
+          <p>适配千川推商品、推直播报表，聚焦净ROI、退款质量和视频留存。</p>
+          <i>进入抖音系统 →</i>
+        </button>
+        <button type="button" class="system-card taobao" data-enter-system="taobao">
+          <span class="system-icon">淘</span>
+          <small>TAOBAO WORKSPACE</small>
+          <strong>淘宝视频素材分析</strong>
+          <p>适配万相台内容营销短视频报表，聚焦成交、有效观看、收藏加购和新客。</p>
+          <i>进入淘宝系统 →</i>
+        </button>
+      </div>
+      <div class="home-privacy">LOCAL ONLY · Excel 数据仅保存在当前浏览器，不上传服务器</div>
+    </div>
+  </section>
+
+  <main id="system-workspace" class="app-shell" hidden>
     <header class="topbar">
-      <div>
-        <div class="eyebrow">DOUYIN MATERIAL OPERATING SYSTEM</div>
-        <h1>素材智析 <span>LOCAL</span></h1>
-        <p>数据仅保存在当前浏览器 · 自动识别推商品与推直播报表并分别建模</p>
+      <div class="workspace-heading">
+        <button id="back-home" class="back-button" type="button">← 返回系统首页</button>
+        <div id="system-eyebrow" class="eyebrow"></div>
+        <h1 id="system-title"></h1>
+        <p id="system-description"></p>
       </div>
       <div class="header-actions">
-        <label class="upload-button" for="excel-file">＋ 上传 Excel</label>
+        <label id="upload-label" class="upload-button" for="excel-file">＋ 上传 Excel</label>
         <input id="excel-file" class="sr-only" type="file" accept=".xlsx,.xls">
-        <button id="clear-data" class="ghost-button" type="button">清空本地数据</button>
+        <button id="clear-data" class="ghost-button" type="button">清空本系统数据</button>
       </div>
     </header>
 
     <div id="notice" class="notice" hidden></div>
 
     <section id="filters" class="filter-strip" hidden>
-      <label>投放类型
+      <label id="mode-field">投放类型
         <select id="mode-filter"><option value="all">全部类型</option></select>
       </label>
-      <label>店铺
+      <label id="shop-field">店铺
         <select id="shop-filter"><option value="all">全部店铺</option></select>
       </label>
-      <label>千川账户
-        <select id="account-filter"><option value="all">全部账户</option></select>
+      <label><span id="account-label">账户/计划</span>
+        <select id="account-filter"><option value="all">全部账户/计划</option></select>
+      </label>
+      <label><span id="material-label">素材ID</span>
+        <select id="material-filter"><option value="all">全部素材</option></select>
       </label>
       <label>开始月份<input id="start-date" type="month"></label>
       <span class="date-arrow">→</span>
       <label>结束月份<input id="end-date" type="month"></label>
       <button id="reanalyze" class="secondary-button" type="button">重新分析</button>
-      <div class="range-meta">推商品与推直播使用各自基准评分</div>
+      <div id="range-meta" class="range-meta"></div>
     </section>
 
     <section id="empty-state" class="empty-state">
-      <div class="empty-mark">↥</div>
-      <h2>上传第一份素材数据</h2>
-      <p>支持同一文件中的“推商品”和“推直播”工作表，自动兼容“展示/展现”等字段差异。数据只写入当前浏览器，不会上传至服务器。</p>
+      <div id="empty-mark" class="empty-mark">↑</div>
+      <h2 id="empty-title"></h2>
+      <p id="empty-copy"></p>
       <label class="upload-button" for="excel-file">选择 Excel 文件</label>
     </section>
 
@@ -62,6 +93,6 @@
     </div>
   </main>
   <script src="./xlsx.full.min.js"></script>
-  <script type="module" src="./app.js?v=20260723-7"></script>
+  <script type="module" src="./app.js?v=20260728-1"></script>
 </body>
 </html>

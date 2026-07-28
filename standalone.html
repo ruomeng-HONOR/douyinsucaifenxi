@@ -3,15 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="无需登录、数据保存在浏览器本地的短视频素材投放分析看板">
-  <title>素材智析 · 本地公开版</title>
+  <meta name="description" content="抖音与淘宝短视频素材的本地独立分析系统">
+  <title>双平台视频素材分析系统</title>
   <style>
 :root{--ink:#19213a;--muted:#70788e;--line:#e4e8f0;--panel:#fff;--bg:#f5f6f8;--navy:#13233f;--blue:#3167ed;--cyan:#5ed3d0;--good:#0a9274;--good-bg:#e7f7f2;--poor:#d44852;--poor-bg:#fff0f1;--normal:#76642b;--normal-bg:#f8f2dc;--shadow:0 8px 30px #18233a0a}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Microsoft YaHei",system-ui,sans-serif}
 button,input,select{font:inherit}
 button{cursor:pointer}
+.system-home{min-height:100vh;display:grid;place-items:center;padding:48px 24px;background:radial-gradient(circle at 15% 12%,#dbe7ff 0,transparent 32%),radial-gradient(circle at 88% 85%,#ffe1c6 0,transparent 34%),#f6f7fa}
+.home-shell{width:min(1100px,100%);display:grid;gap:34px}
+.home-brand{text-align:center}
+.home-brand h1{font-size:clamp(34px,5vw,58px);letter-spacing:-.055em;margin:12px 0 10px}
+.home-brand p{margin:0;color:var(--muted);font-size:16px}
+.system-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.system-card{position:relative;overflow:hidden;min-height:315px;padding:30px;text-align:left;border:1px solid #fff;background:#ffffffd9;border-radius:22px;box-shadow:0 22px 60px #25324a14;display:flex;flex-direction:column;align-items:flex-start;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.system-card:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--system-color)}
+.system-card:hover,.system-card:focus-visible{transform:translateY(-5px);box-shadow:0 28px 70px #25324a22;border-color:var(--system-color);outline:none}
+.system-card.douyin{--system-color:#265ee8}
+.system-card.taobao{--system-color:#f07a24}
+.system-icon{width:58px;height:58px;border-radius:17px;display:grid;place-content:center;background:color-mix(in srgb,var(--system-color) 12%,white);color:var(--system-color);font-size:24px;font-weight:800;margin-bottom:28px}
+.system-card small{color:var(--system-color);font-size:10px;font-weight:800;letter-spacing:.16em}
+.system-card strong{font-size:25px;margin:8px 0 10px;letter-spacing:-.025em}
+.system-card p{max-width:410px;color:var(--muted);font-size:13px;line-height:1.7;margin:0}
+.system-card i{margin-top:auto;padding-top:28px;color:var(--system-color);font-style:normal;font-weight:750}
+.home-privacy{text-align:center;color:#8c93a3;font-size:11px;letter-spacing:.08em}
 .app-shell{max-width:1600px;margin:auto;padding:30px 34px 54px}
+.workspace-heading{display:grid;justify-items:start}
+.back-button{border:0;background:transparent;color:var(--muted);padding:0;margin:0 0 15px;font-size:12px}
+.back-button:hover{color:var(--blue)}
+.app-shell[data-system="taobao"]{--blue:#ed721c;--navy:#8b3f0b;--cyan:#f7b45e;--good:#b65a13;--good-bg:#fff1e5}
+.app-shell[data-system="taobao"] .eyebrow{color:#ed721c}
+.app-shell[data-system="taobao"] .empty-mark{background:#fff0e3;color:#ed721c}
+.app-shell[data-system="taobao"] .upload-button{background:#a94d0f}
+.app-shell[data-system="taobao"] .upload-button:hover{background:#803909}
 .topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:22px}
 .eyebrow{font-size:11px;letter-spacing:.18em;color:var(--blue);font-weight:700}
 .topbar h1{font-size:32px;line-height:1;margin:8px 0 7px;letter-spacing:-.04em}
@@ -40,7 +65,7 @@ button{cursor:pointer}
 .section-nav button{border:0;background:transparent;color:#596276;border-radius:7px;padding:8px 16px;white-space:nowrap;font-weight:600}
 .section-nav button.active{background:#fff;color:var(--navy);box-shadow:0 1px 5px #1f2d4a18}
 .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.metric-grid article,.panel,.insight-grid article,.tier-grid article,.function-grid article{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.metric-grid article,.panel,.insight-grid article,.tier-grid button,.function-grid article{background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
 .metric-grid article{padding:17px 18px;display:grid;gap:7px}
 .metric-grid span,.metric-grid small{color:var(--muted);font-size:12px}
 .metric-grid strong{font-size:25px;letter-spacing:-.03em}
@@ -50,6 +75,12 @@ button{cursor:pointer}
 .insight-grid article{padding:15px 17px;border-left:3px solid var(--blue)}
 .insight-grid b{font-size:13px}
 .insight-grid p{font-size:12px;color:var(--muted);margin:6px 0 0;line-height:1.55}
+.commerce-funnel{background:linear-gradient(135deg,#fff 0%,#fff9f1 100%);border-color:#f2dcc5}
+.funnel-flow{display:grid;grid-template-columns:repeat(9,max-content);align-items:center;justify-content:space-between;gap:8px;overflow:auto;padding:4px 2px 2px}
+.funnel-flow article{min-width:128px;padding:12px 14px;border:1px solid #eadfce;border-radius:9px;background:#fff;display:grid;gap:4px;box-shadow:0 4px 16px #6d4c2210}
+.funnel-flow article span,.funnel-flow article small{font-size:10px;color:var(--muted)}
+.funnel-flow article strong{font-size:19px;color:#9b5317}
+.funnel-flow>i{font-style:normal;color:#d6a36f;font-size:18px}
 .two-column{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(340px,.55fr);gap:16px;margin-bottom:16px}
 .panel{padding:18px;min-width:0;margin-bottom:16px}
 .panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:12px}
@@ -88,7 +119,12 @@ button{cursor:pointer}
 .field input{min-width:210px}
 .field select{min-width:110px}
 .tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
-.tier-grid article{padding:16px;display:grid;gap:5px}
+.tier-grid button{padding:16px;display:grid;gap:5px;text-align:left;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.tier-grid button:hover,.tier-grid button:focus-visible{border-color:var(--blue);box-shadow:0 8px 22px #3167ed1a;transform:translateY(-1px);outline:none}
+.tier-grid button.active{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue),0 8px 24px #3167ed18;background:#f8faff}
+.tier-grid button.active.good{border-color:var(--good);box-shadow:inset 0 0 0 1px var(--good),0 8px 24px #0a927418;background:var(--good-bg)}
+.tier-grid button.active.normal{border-color:#ad8f34;box-shadow:inset 0 0 0 1px #ad8f34,0 8px 24px #ad8f3418;background:var(--normal-bg)}
+.tier-grid button.active.poor{border-color:var(--poor);box-shadow:inset 0 0 0 1px var(--poor),0 8px 24px #d4485218;background:var(--poor-bg)}
 .tier-grid span,.tier-grid small{font-size:11px;color:var(--muted)}
 .tier-grid strong{font-size:25px}
 .workspace{display:grid;grid-template-columns:minmax(560px,1.05fr) minmax(430px,.95fr);gap:16px;align-items:start}
@@ -154,52 +190,85 @@ tbody tr.selected{background:#eef3ff;box-shadow:inset 3px 0 var(--blue)}
 .settlement-grid b{font-size:12px}
 .action-copy{white-space:normal;min-width:280px;text-align:left;line-height:1.55}
 .chart-empty{min-height:240px;display:grid;place-content:center;color:var(--muted);font-size:12px}
+.render-error{border-color:#f3c6ca;background:var(--poor-bg);color:var(--poor)}
+.render-error h2{font-size:16px;margin:0 0 6px}.render-error p{font-size:12px;margin:0}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 [hidden]{display:none!important}
 @media(max-width:1180px){.metric-grid{grid-template-columns:repeat(2,1fr)}.two-column,.workspace{grid-template-columns:1fr}.function-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:130px minmax(100px,1fr) 95px 95px}.category-row>span:last-child{display:none}}
-@media(max-width:760px){.app-shell{padding:20px 14px 40px}.topbar{align-items:flex-start}.header-actions{align-items:flex-end;flex-direction:column}.filter-strip{align-items:stretch;flex-wrap:wrap}.filter-strip label{flex:1}.range-meta,.date-arrow{display:none}.insight-grid,.function-grid,.mode-summary{grid-template-columns:1fr}.mode-summary article{grid-template-columns:repeat(2,1fr)}.tier-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:100px minmax(90px,1fr) 90px}.category-row>span:nth-last-child(-n+2){display:none}.detail-metrics,.settlement-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.toolbar-group,.field,.field input,.field select{width:100%}.pagination{align-items:flex-start;flex-direction:column}.pagination>div{max-width:100%;overflow:auto}}
+@media(max-width:760px){.system-home{padding:32px 16px}.system-cards{grid-template-columns:1fr}.system-card{min-height:270px;padding:24px}.app-shell{padding:20px 14px 40px}.topbar{align-items:flex-start}.header-actions{align-items:flex-end;flex-direction:column}.filter-strip{align-items:stretch;flex-wrap:wrap}.filter-strip label{flex:1}.range-meta,.date-arrow{display:none}.insight-grid,.function-grid,.mode-summary{grid-template-columns:1fr}.mode-summary article{grid-template-columns:repeat(2,1fr)}.tier-grid{grid-template-columns:repeat(2,1fr)}.category-row{grid-template-columns:100px minmax(90px,1fr) 90px}.category-row>span:nth-last-child(-n+2){display:none}.detail-metrics,.settlement-grid{grid-template-columns:repeat(2,1fr)}.toolbar{align-items:stretch}.toolbar-group,.field,.field input,.field select{width:100%}.pagination{align-items:flex-start;flex-direction:column}.pagination>div{max-width:100%;overflow:auto}.funnel-flow{justify-content:start}}
 @media(max-width:470px){.topbar{flex-direction:column}.header-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap}.metric-grid,.tier-grid{grid-template-columns:1fr}.section-nav{width:100%}.section-nav button{flex:1;padding:8px 10px}.category-row{grid-template-columns:90px 1fr}.category-row>span{display:none!important}}
 
 </style>
 </head>
 <body>
-  <main class="app-shell">
+  <section id="system-home" class="system-home">
+    <div class="home-shell">
+      <div class="home-brand">
+        <div class="eyebrow">VIDEO MATERIAL INTELLIGENCE</div>
+        <h1>双平台视频素材分析系统</h1>
+        <p>抖音与淘宝使用独立的数据空间、筛选条件、评分模型和经营看板。</p>
+      </div>
+      <div class="system-cards">
+        <button type="button" class="system-card douyin" data-enter-system="douyin">
+          <span class="system-icon">抖</span>
+          <small>DOUYIN WORKSPACE</small>
+          <strong>抖音视频素材分析</strong>
+          <p>适配千川推商品、推直播报表，聚焦净ROI、退款质量和视频留存。</p>
+          <i>进入抖音系统 →</i>
+        </button>
+        <button type="button" class="system-card taobao" data-enter-system="taobao">
+          <span class="system-icon">淘</span>
+          <small>TAOBAO WORKSPACE</small>
+          <strong>淘宝视频素材分析</strong>
+          <p>适配万相台内容营销短视频报表，聚焦成交、有效观看、收藏加购和新客。</p>
+          <i>进入淘宝系统 →</i>
+        </button>
+      </div>
+      <div class="home-privacy">LOCAL ONLY · Excel 数据仅保存在当前浏览器，不上传服务器</div>
+    </div>
+  </section>
+
+  <main id="system-workspace" class="app-shell" hidden>
     <header class="topbar">
-      <div>
-        <div class="eyebrow">DOUYIN MATERIAL OPERATING SYSTEM</div>
-        <h1>素材智析 <span>LOCAL</span></h1>
-        <p>数据仅保存在当前浏览器 · 自动识别推商品与推直播报表并分别建模</p>
+      <div class="workspace-heading">
+        <button id="back-home" class="back-button" type="button">← 返回系统首页</button>
+        <div id="system-eyebrow" class="eyebrow"></div>
+        <h1 id="system-title"></h1>
+        <p id="system-description"></p>
       </div>
       <div class="header-actions">
-        <label class="upload-button" for="excel-file">＋ 上传 Excel</label>
+        <label id="upload-label" class="upload-button" for="excel-file">＋ 上传 Excel</label>
         <input id="excel-file" class="sr-only" type="file" accept=".xlsx,.xls">
-        <button id="clear-data" class="ghost-button" type="button">清空本地数据</button>
+        <button id="clear-data" class="ghost-button" type="button">清空本系统数据</button>
       </div>
     </header>
 
     <div id="notice" class="notice" hidden></div>
 
     <section id="filters" class="filter-strip" hidden>
-      <label>投放类型
+      <label id="mode-field">投放类型
         <select id="mode-filter"><option value="all">全部类型</option></select>
       </label>
-      <label>店铺
+      <label id="shop-field">店铺
         <select id="shop-filter"><option value="all">全部店铺</option></select>
       </label>
-      <label>千川账户
-        <select id="account-filter"><option value="all">全部账户</option></select>
+      <label><span id="account-label">账户/计划</span>
+        <select id="account-filter"><option value="all">全部账户/计划</option></select>
+      </label>
+      <label><span id="material-label">素材ID</span>
+        <select id="material-filter"><option value="all">全部素材</option></select>
       </label>
       <label>开始月份<input id="start-date" type="month"></label>
       <span class="date-arrow">→</span>
       <label>结束月份<input id="end-date" type="month"></label>
       <button id="reanalyze" class="secondary-button" type="button">重新分析</button>
-      <div class="range-meta">推商品与推直播使用各自基准评分</div>
+      <div id="range-meta" class="range-meta"></div>
     </section>
 
     <section id="empty-state" class="empty-state">
-      <div class="empty-mark">↥</div>
-      <h2>上传第一份素材数据</h2>
-      <p>支持同一文件中的“推商品”和“推直播”工作表，自动兼容“展示/展现”等字段差异。数据只写入当前浏览器，不会上传至服务器。</p>
+      <div id="empty-mark" class="empty-mark">↑</div>
+      <h2 id="empty-title"></h2>
+      <p id="empty-copy"></p>
       <label class="upload-button" for="excel-file">选择 Excel 文件</label>
     </section>
 
@@ -245,8 +314,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 const TIER_LABELS = { good: "优质", normal: "普通", poor: "劣质" };
 
 const REPORT_META = {
-  "推商品": { color: "#2f6bff", description: "以商品成交效率、净ROI和退款质量为主，兼顾视频留存" },
-  "推直播": { color: "#9b5de5", description: "以直播成交效率为主，提高点击与视频留存的评分权重" },
+  "推商品": { platform: "抖音", color: "#2f6bff", description: "以商品成交效率、净ROI和退款质量为主，兼顾视频留存" },
+  "推直播": { platform: "抖音", color: "#9b5de5", description: "以直播成交效率为主，提高点击与视频留存的评分权重" },
+  "淘系短视频": { platform: "淘系", color: "#f08c2e", description: "以总成交ROI为核心，结合有效观看、收藏加购、访问深度和新客效率" },
 };
 
 const FUNCTION_META = {
@@ -273,6 +343,13 @@ const FIELD_ALIASES = {
 const SCORE_WEIGHTS = {
   "推商品": { gross: 0.20, net: 0.20, cvr: 0.12, ctr: 0.08, amount: 0.08, spend: 0.07, refund: 0.10, complete: 0.05, threeSecond: 0.05, fiveSecond: 0.05 },
   "推直播": { gross: 0.17, net: 0.18, cvr: 0.10, ctr: 0.10, amount: 0.07, spend: 0.08, refund: 0.10, complete: 0.08, threeSecond: 0.06, fiveSecond: 0.06 },
+  "淘系短视频": { gross: 0.24, cvr: 0.14, ctr: 0.08, amount: 0.08, spend: 0.05, effective: 0.12, avgWatch: 0.06, interaction: 0.05, favoriteCart: 0.08, visit: 0.05, newCustomer: 0.05 },
+};
+
+const CONTENT_WEIGHTS = {
+  "推商品": { complete: 1 / 3, threeSecond: 1 / 3, fiveSecond: 1 / 3 },
+  "推直播": { complete: 0.40, threeSecond: 0.30, fiveSecond: 0.30 },
+  "淘系短视频": { effective: 0.40, avgWatch: 0.20, interaction: 0.15, favoriteCart: 0.25 },
 };
 
 const n = (value) => Number(value) || 0;
@@ -313,14 +390,22 @@ function percentValue(value) {
 
 function detectReportType(headers = [], sheetName = "") {
   const names = new Set(headers);
+  if ((names.has("主体ID") && names.has("主体名称") && names.has("总成交金额"))
+    || (names.has("有效观看量") && names.has("宝贝收藏加购数") && names.has("宝贝ID"))
+    || /万相台|超级短视频|淘系|天猫/.test(sheetName)) return "淘系短视频";
   if (/直播/.test(sheetName) || names.has("全域素材视频类型") || names.has("基础消耗") || names.has("整体消耗占比")) return "推直播";
   if (/商品/.test(sheetName) || names.has("整体展示次数") || names.has("整体未完结预售订单预估金额")) return "推商品";
   if (names.has("素材ID") && names.has("日期") && (names.has("整体展示次数") || names.has("整体展现次数"))) return "推商品";
   return "";
 }
 
-function validateReportHeaders(headers = []) {
+function validateReportHeaders(headers = [], reportType = "") {
   const names = new Set(headers);
+  const detected = reportType || detectReportType(headers);
+  if (detected === "淘系短视频") {
+    return ["日期", "主体ID", "主体名称", "展现量", "点击量", "花费", "总成交金额", "总成交笔数"]
+      .filter((name) => !names.has(name));
+  }
   return Object.entries(FIELD_ALIASES)
     .filter(([, aliases]) => !aliases.some((alias) => names.has(alias)))
     .map(([field]) => ({
@@ -339,32 +424,37 @@ function validateReportHeaders(headers = []) {
 function normalizeExcelRow(row, reportType = "") {
   const explicitReportType = typeof reportType === "string" ? reportType : "";
   const deliveryMode = explicitReportType || row.__reportType || detectReportType(Object.keys(row), "") || "推商品";
-  const shopCode = String(pick(row, FIELD_ALIASES.shopCode)).trim();
-  const qianchuanId = String(row["千川ID"] ?? "").trim();
-  const materialId = String(row["素材ID"] ?? "").trim();
-  const materialName = String(row["素材视频名称"] ?? "未命名素材").trim() || "未命名素材";
-  const videoType = String(row["全域素材视频类型"] ?? "").trim();
+  const isTmall = deliveryMode === "淘系短视频";
+  const platform = isTmall ? "淘系" : "抖音";
+  const shopCode = isTmall
+    ? String(row["店铺"] ?? row["店铺名称"] ?? row["店铺编码"] ?? "淘系店铺").trim()
+    : String(pick(row, FIELD_ALIASES.shopCode)).trim();
+  const qianchuanId = String(isTmall ? row["计划ID"] ?? "" : row["千川ID"] ?? "").trim();
+  const materialId = String(isTmall ? row["主体ID"] ?? "" : row["素材ID"] ?? "").trim();
+  const materialName = String(isTmall ? row["主体名称"] ?? "未命名素材" : row["素材视频名称"] ?? "未命名素材").trim() || "未命名素材";
+  const videoType = String(isTmall ? row["主体类型"] ?? "短视频" : row["全域素材视频类型"] ?? "").trim();
   const date = normalizeDate(row["日期"]);
-  const impressions = numberValue(pick(row, FIELD_ALIASES.impressions));
-  const clicks = numberValue(row["整体点击次数"]);
-  const spend = numberValue(row["整体消耗"]);
-  const grossAmount = numberValue(row["整体成交金额"]);
-  const grossOrders = numberValue(row["整体成交订单数"]);
-  const netAmount = numberValue(row["净成交金额"]);
-  const netOrders = numberValue(row["净成交订单数"]);
-  const videoPlays = numberValue(row["视频播放数"]);
-  const videoCompletionRate = percentValue(row["视频完播率"]);
-  const videoCompletes = numberValue(row["视频完播数"]) || videoPlays * videoCompletionRate;
-  const avgWatchTime = numberValue(row["平均观看时长"]);
+  const impressions = numberValue(isTmall ? row["展现量"] : pick(row, FIELD_ALIASES.impressions));
+  const clicks = numberValue(isTmall ? row["点击量"] : row["整体点击次数"]);
+  const spend = numberValue(isTmall ? row["花费"] : row["整体消耗"]);
+  const grossAmount = numberValue(isTmall ? row["总成交金额"] : row["整体成交金额"]);
+  const grossOrders = numberValue(isTmall ? row["总成交笔数"] : row["整体成交订单数"]);
+  const netAmount = isTmall ? grossAmount : numberValue(row["净成交金额"]);
+  const netOrders = isTmall ? grossOrders : numberValue(row["净成交订单数"]);
+  const videoPlays = numberValue(isTmall ? row["观看量"] : row["视频播放数"]);
+  const videoCompletionRate = percentValue(isTmall ? row["有效观看率"] : row["视频完播率"]);
+  const videoCompletes = numberValue(isTmall ? row["有效观看量"] : row["视频完播数"]) || videoPlays * videoCompletionRate;
+  const avgWatchTime = numberValue(isTmall ? row["平均有效观看时长"] : row["平均观看时长"]);
   const refund1hAmount = numberValue(row["1小时内退款金额"]);
   const refund1hRate = percentValue(row["1小时内退款率"]);
   const isSummary = ["-", "全部"].includes(materialId) || (videoType === "全部" && materialName === "全部");
-  const keyParts = ["v2", deliveryMode, shopCode, qianchuanId || "-", materialId, date];
+  const keyParts = ["v3", deliveryMode, shopCode, qianchuanId || "-", materialId, date];
   const materialKey = [deliveryMode, shopCode, qianchuanId || "-", materialId].join("::");
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     key: keyParts.join("::"),
     materialKey,
+    platform,
     deliveryMode,
     shopCode,
     qianchuanId,
@@ -372,6 +462,8 @@ function normalizeExcelRow(row, reportType = "") {
     materialName,
     materialCreatedAt: String(row["素材创建时间"] ?? ""),
     videoType,
+    planName: String(row["计划名字"] ?? ""),
+    itemId: String(row["宝贝ID"] ?? ""),
     date,
     isSummary,
     impressions,
@@ -393,7 +485,7 @@ function normalizeExcelRow(row, reportType = "") {
     unfinishedPresaleAmount: numberValue(row["整体未完结预售订单预估金额"]),
     refund1hOrders: numberValue(row["1小时内退款订单数"]),
     refund1hAmount,
-    refundWeighted: refund1hAmount || grossAmount * refund1hRate || Math.max(0, grossAmount - netAmount),
+    refundWeighted: isTmall ? 0 : refund1hAmount || grossAmount * refund1hRate || Math.max(0, grossAmount - netAmount),
     settlement7Amount: numberValue(row["7日结算金额"]),
     settlement7Orders: numberValue(row["7日结算订单数"]),
     settlement14Amount: numberValue(row["14日结算金额"]),
@@ -404,23 +496,40 @@ function normalizeExcelRow(row, reportType = "") {
     settlement90Orders: numberValue(row["90日结算订单数"]),
     videoPlays,
     videoCompletes,
-    likes: numberValue(row["视频点赞数"]),
-    comments: numberValue(row["视频评论数"]),
-    newFollowers: numberValue(row["新增粉丝数"]),
-    watchTimeWeighted: videoPlays * avgWatchTime,
+    effectiveViews: isTmall ? videoCompletes : 0,
+    engagements: numberValue(isTmall ? row["互动量"] : 0),
+    likes: numberValue(isTmall ? row["点赞量"] : row["视频点赞数"]),
+    comments: numberValue(isTmall ? row["评论量"] : row["视频评论数"]),
+    shares: numberValue(isTmall ? row["转发量"] : 0),
+    newFollowers: numberValue(isTmall ? row["关注量"] : row["新增粉丝数"]),
+    watchTimeWeighted: (isTmall ? videoCompletes : videoPlays) * avgWatchTime,
     twoSecondPlays: videoPlays * percentValue(row["2秒播放率"]),
     threeSecondPlays: videoPlays * percentValue(row["3秒播放率"]),
     fiveSecondPlays: videoPlays * percentValue(row["5秒播放率"]),
     tenSecondPlays: videoPlays * percentValue(row["10秒播放率"]),
     grossAmountShare: percentValue(row["整体成交金额占比"]),
     spendShare: percentValue(row["整体消耗占比"]),
+    directGrossAmount: numberValue(row["直接成交金额"]),
+    indirectGrossAmount: numberValue(row["间接成交金额"]),
+    favoriteCart: numberValue(row["宝贝收藏加购数"]),
+    addCart: numberValue(row["宝贝加购数"]),
+    favorites: numberValue(row["总收藏数"]),
+    guidedVisits: numberValue(row["引导访问量"]),
+    guidedVisitors: numberValue(row["引导访问人数"]),
+    deepVisits: numberValue(row["深度访问量"]),
+    newCustomerReach: numberValue(row["新客触达数"]),
+    newCustomerOrders: numberValue(row["新客成交笔数"]),
+    newCustomerAmount: numberValue(row["新客成交金额"]),
   };
 }
 
 function normalizeStoredRows(rows) {
-  const currentIdentities = new Set(rows.filter((row) => row.schemaVersion === 2).map((row) => `${row.deliveryMode}::${row.shopCode}::${row.materialId}::${row.date}`));
-  return rows.filter((row) => row.schemaVersion === 2 || !currentIdentities.has(`${row.deliveryMode || "推商品"}::${row.shopCode}::${row.materialId}::${row.date}`)).map((row) => ({
+  const identityOf = (row) => `${row.deliveryMode || "推商品"}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}::${row.date}`;
+  const latestVersions = new Map();
+  for (const row of rows) latestVersions.set(identityOf(row), Math.max(latestVersions.get(identityOf(row)) || 0, Number(row.schemaVersion) || 1));
+  return rows.filter((row) => (Number(row.schemaVersion) || 1) === latestVersions.get(identityOf(row))).map((row) => ({
     deliveryMode: "推商品",
+    platform: REPORT_META[row.deliveryMode]?.platform || "抖音",
     qianchuanId: "",
     videoType: "",
     ...row,
@@ -455,7 +564,7 @@ function categoryOf(name) {
   const sets = [
     ["毛绒", /毛绒|公仔|玩偶|小猪|猫|熊|挂件|水豚|史迪仔|阿柴/i],
     ["潮玩", /盲盒|三丽鸥|kitty|萌豆|yoyo|冰箱贴|腕表|玩具/i],
-    ["出行个护", /气囊梳|梳子|风扇|随手杯|保温杯|旅行|u型枕|个护/i],
+    ["出行个护", /气囊梳|梳子|风扇|随手杯|保温杯|旅行|u型枕|个护|干发|喷雾|洗护|清洁|油头/i],
     ["香氛护肤彩妆", /香水|香氛|护肤|彩妆|气垫|口红|唇|面膜|精华/i],
   ];
   const matched = sets.filter(([, re]) => re.test(name)).map(([label]) => label);
@@ -469,6 +578,8 @@ const SUM_FIELDS = [
   "settlement7Amount", "settlement7Orders", "settlement14Amount", "settlement14Orders", "settlement30Amount", "settlement30Orders",
   "settlement90Amount", "settlement90Orders", "videoPlays", "videoCompletes", "likes", "comments", "newFollowers", "watchTimeWeighted",
   "twoSecondPlays", "threeSecondPlays", "fiveSecondPlays", "tenSecondPlays",
+  "effectiveViews", "engagements", "shares", "directGrossAmount", "indirectGrossAmount", "favoriteCart", "addCart", "favorites",
+  "guidedVisits", "guidedVisitors", "deepVisits", "newCustomerReach", "newCustomerOrders", "newCustomerAmount",
 ];
 
 function aggregateRows(rows) {
@@ -477,6 +588,7 @@ function aggregateRows(rows) {
     const deliveryMode = row.deliveryMode || "推商品";
     const key = `${deliveryMode}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}`;
     const current = map.get(key) || {
+      platform: row.platform || REPORT_META[deliveryMode]?.platform || "抖音",
       deliveryMode,
       shopCode: row.shopCode,
       qianchuanId: row.qianchuanId || "",
@@ -484,6 +596,8 @@ function aggregateRows(rows) {
       name: row.materialName,
       materialCreatedAt: row.materialCreatedAt || "",
       videoType: row.videoType || "",
+      planName: row.planName || "",
+      itemId: row.itemId || "",
       dates: new Set(),
       activeDaysTotal: 0,
       rowCount: 0,
@@ -494,6 +608,8 @@ function aggregateRows(rows) {
     current.name = row.materialName || current.name;
     current.videoType = row.videoType || current.videoType;
     current.materialCreatedAt = row.materialCreatedAt || current.materialCreatedAt;
+    current.planName = row.planName || current.planName;
+    current.itemId = row.itemId || current.itemId;
     current.dates.add(row.date);
     current.activeDaysTotal += row.isMonthlyAggregate ? n(row.activeDays) : 0;
     current.rowCount += 1;
@@ -524,7 +640,14 @@ function enrich(item) {
     refund: div(Math.max(0, item.grossAmount - item.netAmount), item.grossAmount),
     refund1hRate: div(item.refund1hAmount, item.grossAmount),
     videoCompletionRate: div(item.videoCompletes, item.videoPlays),
-    avgWatchTime: div(item.watchTimeWeighted, item.videoPlays),
+    effectiveViewRate: div(item.effectiveViews, item.videoPlays),
+    avgWatchTime: div(item.watchTimeWeighted, item.platform === "淘系" ? item.effectiveViews : item.videoPlays),
+    interactionRate: div(item.engagements, item.videoPlays),
+    favoriteCartRate: div(item.favoriteCart, item.clicks),
+    addCartRate: div(item.addCart, item.clicks),
+    guidedVisitRate: div(item.guidedVisits, item.impressions),
+    newCustomerRate: div(item.newCustomerOrders, item.clicks),
+    directAmountShare: div(item.directGrossAmount, item.grossAmount),
     twoSecondRate: div(item.twoSecondPlays, item.videoPlays),
     threeSecondRate: div(item.threeSecondPlays, item.videoPlays),
     fiveSecondRate: div(item.fiveSecondPlays, item.videoPlays),
@@ -537,7 +660,7 @@ function enrich(item) {
     settlement14Rate: div(item.settlement14Amount, item.grossAmount),
     settlement30Rate: div(item.settlement30Amount, item.grossAmount),
     settlement90Rate: div(item.settlement90Amount, item.grossAmount),
-    category: categoryOf(item.name),
+    category: categoryOf(`${item.name || ""} ${item.planName || ""}`),
   };
 }
 
@@ -558,6 +681,15 @@ function summarize(materials) {
     avgWatchTime: div(total.watchTimeWeighted, total.videoPlays),
     threeSecondRate: div(total.threeSecondPlays, total.videoPlays),
     fiveSecondRate: div(total.fiveSecondPlays, total.videoPlays),
+    effectiveViewRate: div(total.effectiveViews, total.videoPlays),
+    avgWatchTime: div(total.watchTimeWeighted, total.effectiveViews || total.videoPlays),
+    interactionRate: div(total.engagements, total.videoPlays),
+    favoriteCartRate: div(total.favoriteCart, total.clicks),
+    addCartRate: div(total.addCart, total.clicks),
+    guidedVisitRate: div(total.guidedVisits, total.impressions),
+    newCustomerRate: div(total.newCustomerOrders, total.clicks),
+    newCustomerRoi: div(total.newCustomerAmount, total.spend),
+    directAmountShare: div(total.directGrossAmount, total.grossAmount),
   };
 }
 
@@ -566,6 +698,14 @@ function classifyFunctional(item, thresholds) {
   const highCtr = item.ctr >= thresholds.ctrMedian;
   const highCvr = item.cvr >= thresholds.cvrMedian;
   const highRoi = item.netRoi >= thresholds.roiMedian;
+  if (item.platform === "淘系") {
+    const highVisit = item.guidedVisitRate >= thresholds.visitMedian;
+    if (highCtr && highCvr && highRoi) return "爆款型";
+    if ((highCtr || highVisit) && !highCvr) return "引流型";
+    if (item.spend >= thresholds.spend75 && !highRoi) return "损耗型";
+    if (item.spend <= thresholds.spendMedian && item.grossRoi >= thresholds.roi75) return "精品型";
+    return "其他";
+  }
   if (highCtr && item.refund >= thresholds.refundRisk) return "误导型";
   if (highCtr && highCvr && highRoi) return "爆款型";
   if (highCtr && !highCvr) return "引流型";
@@ -575,6 +715,14 @@ function classifyFunctional(item, thresholds) {
 }
 
 function actionFor(item) {
+  if (item.platform === "淘系") {
+    if (item.spend >= 50 && item.grossOrders === 0) return "停止继续试量，优先重做前段吸引力、商品卖点和进店承接。";
+    if (item.functionalType === "损耗型") return "降低预算或出价，检查有效观看到访问、加购及成交的断点；无改善则暂停。";
+    if (item.functionalType === "引流型") return "保留引流价值，重点优化商品承接、收藏加购激励和成交路径。";
+    if (item.functionalType === "精品型") return "小步增加预算，观察放量后的成交ROI、收藏加购率和新客成本是否稳定。";
+    if (item.functionalType === "爆款型") return "保持预算并复制题材，持续监测有效观看、收藏加购和成交ROI衰退。";
+    return "小预算验证，观察有效观看、访问、收藏加购和成交效率后再决定是否放量。";
+  }
   const landing = item.deliveryMode === "推直播" ? "直播间承接、开场话术和人货匹配" : "商品承接、利益点和成交路径";
   if (item.grossOrders >= 10 && item.grossAmount >= 500 && item.refund >= 0.2) return `暂停扩量，核对内容承诺与实际成交体验，并复盘${landing}。`;
   if (item.spend >= 50 && item.netOrders === 0) return `停止继续试量；如需重启，先更换前3秒内容并优化${landing}。`;
@@ -589,8 +737,16 @@ function actionFor(item) {
 function reasonFor(item) {
   const reasons = [];
   if (item.spend < 50) reasons.push("消耗不足¥50，暂不进入稳定评分");
-  else reasons.push(`${item.deliveryMode}同类贝叶斯净ROI ${item.bayesNetRoi.toFixed(2)}`);
+  else reasons.push(item.platform === "淘系"
+    ? `淘系同类贝叶斯成交ROI ${item.bayesRoi.toFixed(2)}`
+    : `${item.deliveryMode}同类贝叶斯净ROI ${item.bayesNetRoi.toFixed(2)}`);
   reasons.push(`内容质量分 ${item.contentScore.toFixed(0)}`);
+  if (item.platform === "淘系") {
+    reasons.push(`有效观看率 ${(item.effectiveViewRate * 100).toFixed(1)}%`);
+    reasons.push(`收藏加购率 ${(item.favoriteCartRate * 100).toFixed(1)}%`);
+    if (item.newCustomerOrders) reasons.push(`新客成交 ${item.newCustomerOrders.toFixed(0)} 笔`);
+    return reasons.join("；");
+  }
   if (item.refund >= 0.15) reasons.push(`退款损失率 ${(item.refund * 100).toFixed(1)}%`);
   if (item.netOrders) reasons.push(`净订单成本 ¥${item.cpa.toFixed(2)}`);
   else if (item.spend >= 50) reasons.push("有消耗但无净订单");
@@ -622,6 +778,7 @@ function modelCohort(items, deliveryMode) {
     spendMedian: quantile(eligible.map((item) => item.spend), 0.5),
     spend75: quantile(eligible.map((item) => item.spend), 0.75),
     refundRisk: 0.15,
+    visitMedian: quantile(eligible.map((item) => item.guidedVisitRate), 0.5),
   };
   const source = modeled.filter((item) => item.spend >= 50);
   const ranks = {
@@ -635,6 +792,12 @@ function modelCohort(items, deliveryMode) {
     complete: ranker(source.map((item) => item.videoCompletionRate)),
     threeSecond: ranker(source.map((item) => item.threeSecondRate)),
     fiveSecond: ranker(source.map((item) => item.fiveSecondRate)),
+    effective: ranker(source.map((item) => item.effectiveViewRate)),
+    avgWatch: ranker(source.map((item) => item.avgWatchTime)),
+    interaction: ranker(source.map((item) => item.interactionRate)),
+    favoriteCart: ranker(source.map((item) => item.favoriteCartRate)),
+    visit: ranker(source.map((item) => item.guidedVisitRate)),
+    newCustomer: ranker(source.map((item) => item.newCustomerRate)),
   };
   const weights = SCORE_WEIGHTS[deliveryMode] || SCORE_WEIGHTS["推商品"];
   const materials = modeled.map((item) => {
@@ -649,10 +812,17 @@ function modelCohort(items, deliveryMode) {
       complete: ranks.complete(item.videoCompletionRate),
       threeSecond: ranks.threeSecond(item.threeSecondRate),
       fiveSecond: ranks.fiveSecond(item.fiveSecondRate),
+      effective: ranks.effective(item.effectiveViewRate),
+      avgWatch: ranks.avgWatch(item.avgWatchTime),
+      interaction: ranks.interaction(item.interactionRate),
+      favoriteCart: ranks.favoriteCart(item.favoriteCartRate),
+      visit: ranks.visit(item.guidedVisitRate),
+      newCustomer: ranks.newCustomer(item.newCustomerRate),
     };
     const score = item.spend < 50 ? 0 : Math.round(100 * Object.entries(weights).reduce((sum, [key, weight]) => sum + weight * values[key], 0));
-    const contentWeight = weights.complete + weights.threeSecond + weights.fiveSecond;
-    const contentScore = item.spend < 50 ? 0 : 100 * (weights.complete * values.complete + weights.threeSecond * values.threeSecond + weights.fiveSecond * values.fiveSecond) / contentWeight;
+    const contentWeights = CONTENT_WEIGHTS[deliveryMode] || CONTENT_WEIGHTS["推商品"];
+    const contentScore = item.spend < 50 ? 0 : 100 * Object.entries(contentWeights)
+      .reduce((sum, [key, weight]) => sum + weight * values[key], 0);
     const tier = score >= 70 ? "good" : score >= 40 ? "normal" : "poor";
     const functionalType = classifyFunctional(item, thresholds);
     const result = { ...item, score, contentScore, tier, functionalType };
@@ -696,23 +866,26 @@ function analyzeRows(rows) {
       type,
       count: items.length,
       share: div(items.length, eligible.length),
+      ...totals,
       spendShare: div(totals.spend, summary.spend),
       netShare: div(totals.netAmount, summary.netAmount),
-      netRoi: totals.netRoi,
-      refundRate: totals.refundRate,
     };
   });
   const modeSummaries = Object.keys(REPORT_META).map((mode) => {
     const items = materials.filter((item) => item.deliveryMode === mode);
-    return { mode, count: items.length, eligible: items.filter((item) => item.spend >= 50).length, ...summarize(items) };
+    return { mode, platform: REPORT_META[mode].platform, count: items.length, eligible: items.filter((item) => item.spend >= 50).length, ...summarize(items) };
   }).filter((item) => item.count);
   const months = new Map();
   for (const row of rows) {
     const month = row.date.slice(0, 7);
-    const current = months.get(month) || { month, spend: 0, grossAmount: 0, netAmount: 0, ids: new Set() };
+    const current = months.get(month) || { month, spend: 0, grossAmount: 0, netAmount: 0, effectiveViews: 0, favoriteCart: 0, guidedVisits: 0, newCustomerOrders: 0, ids: new Set() };
     current.spend += n(row.spend);
     current.grossAmount += n(row.grossAmount);
     current.netAmount += n(row.netAmount);
+    current.effectiveViews += n(row.effectiveViews);
+    current.favoriteCart += n(row.favoriteCart);
+    current.guidedVisits += n(row.guidedVisits);
+    current.newCustomerOrders += n(row.newCustomerOrders);
     current.ids.add(`${row.deliveryMode}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}`);
     months.set(month, current);
   }
@@ -721,6 +894,10 @@ function analyzeRows(rows) {
     spend: item.spend,
     grossAmount: item.grossAmount,
     netAmount: item.netAmount,
+    effectiveViews: item.effectiveViews,
+    favoriteCart: item.favoriteCart,
+    guidedVisits: item.guidedVisits,
+    newCustomerOrders: item.newCustomerOrders,
     grossRoi: div(item.grossAmount, item.spend),
     netRoi: div(item.netAmount, item.spend),
     materials: item.ids.size,
@@ -856,6 +1033,29 @@ async function clearRows() {
     transaction.objectStore(MONTHLY_STORE).clear();
     transaction.oncomplete = resolve;
     transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+function rowPlatform(row) {
+  return row?.platform || (row?.deliveryMode === "淘系短视频" ? "淘系" : "抖音");
+}
+
+async function clearPlatformRows(platform) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE, MONTHLY_STORE], "readwrite");
+    for (const storeName of [STORE, MONTHLY_STORE]) {
+      const request = transaction.objectStore(storeName).openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        if (rowPlatform(cursor.value) === platform) cursor.delete();
+        cursor.continue();
+      };
+    }
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error || new Error("本地数据清理被中止"));
   });
 }
 
@@ -1047,7 +1247,7 @@ async function streamSheet(file, entry, sharedStrings, sheetName, onRow, onProgr
   await reader.cancel();
 }
 
-async function readLargeXlsx(file, { onProgress, onBatch, collectRows = true, maxRowsPerSheet = Infinity } = {}) {
+async function readLargeXlsx(file, { onProgress, onBatch, collectRows = true, maxRowsPerSheet = Infinity, allowedPlatform = "" } = {}) {
   onProgress?.("正在读取大型Excel目录…");
   const entries = await zipEntries(file);
   const sharedEntry = entries.get("xl/sharedStrings.xml");
@@ -1060,17 +1260,22 @@ async function readLargeXlsx(file, { onProgress, onBatch, collectRows = true, ma
   let batch = [];
   const counts = {};
   for (const sheet of sheets) {
-    if (!/推商品|推直播/.test(sheet.name)) continue;
     let headers = [];
     let reportType = "";
     await streamSheet(file, entries.get(sheet.target), sharedStrings, sheet.name, async (cells, rowNumber) => {
       if (rowNumber === 1) {
         headers = cells.map((value) => String(value ?? "").trim());
         reportType = detectReportType(headers, sheet.name);
-        const missing = validateReportHeaders(headers);
+        if (!reportType) return;
+        const reportPlatform = reportType === "淘系短视频" ? "淘系" : "抖音";
+        if (allowedPlatform && reportPlatform !== allowedPlatform) {
+          throw new Error(`当前是${allowedPlatform === "淘系" ? "淘宝" : "抖音"}系统，请上传对应平台的报表`);
+        }
+        const missing = validateReportHeaders(headers, reportType);
         if (missing.length) throw new Error(`${sheet.name}缺少字段：${missing.join("、")}`);
         return;
       }
+      if (!reportType) return;
       const raw = {};
       headers.forEach((header, index) => { if (header) raw[header] = cells[index] ?? ""; });
       const normalized = normalizeExcelRow(raw, reportType);
@@ -1116,9 +1321,37 @@ const debounce = (callback, delay = 300) => {
 const MATERIAL_PAGE_SIZE = 100;
 const ACTION_PAGE_SIZE = 100;
 const ANALYSIS_CACHE_LIMIT = 12;
+const SYSTEMS = {
+  douyin: {
+    platform: "抖音",
+    eyebrow: "DOUYIN MATERIAL OPERATING SYSTEM",
+    title: "抖音视频素材分析系统",
+    description: "独立分析千川推商品与推直播素材 · 数据仅保存在当前浏览器",
+    upload: "＋ 上传抖音报表",
+    emptyTitle: "上传第一份抖音素材数据",
+    emptyCopy: "支持千川“推商品”和“推直播”短视频素材报表，重点分析净ROI、退款质量、转化与视频留存。",
+    accountLabel: "千川账户",
+    materialLabel: "素材ID",
+    rangeMeta: "抖音评分基于净ROI、退款质量与视频留存",
+  },
+  taobao: {
+    platform: "淘系",
+    eyebrow: "TAOBAO CONTENT MARKETING SYSTEM",
+    title: "淘宝视频素材分析系统",
+    description: "独立分析万相台内容营销短视频 · 数据仅保存在当前浏览器",
+    upload: "＋ 上传淘宝报表",
+    emptyTitle: "上传第一份淘宝素材数据",
+    emptyCopy: "支持万相台内容营销“短视频推广效果”报表，重点分析成交ROI、有效观看、收藏加购、访问与新客。",
+    accountLabel: "投放计划",
+    materialLabel: "主体ID",
+    rangeMeta: "淘宝评分基于成交、有效观看、收藏加购与新客效率",
+  },
+};
 
 const state = {
+  allRows: [],
   rows: [],
+  activeSystem: null,
   analysis: null,
   filteredRows: [],
   selected: null,
@@ -1131,15 +1364,19 @@ const state = {
   activeTab: "overview",
   renderedTabs: new Set(),
   analysisCache: new Map(),
+  systemFilters: { douyin: null, taobao: null },
 };
 
 const elements = {
+  home: $("#system-home"),
+  workspace: $("#system-workspace"),
   file: $("#excel-file"),
   notice: $("#notice"),
   filters: $("#filters"),
   mode: $("#mode-filter"),
   shop: $("#shop-filter"),
   account: $("#account-filter"),
+  material: $("#material-filter"),
   start: $("#start-date"),
   end: $("#end-date"),
   empty: $("#empty-state"),
@@ -1153,16 +1390,85 @@ function showNotice(message, error = false) {
   if (message) setTimeout(() => { if (elements.notice.textContent === message) elements.notice.hidden = true; }, 6000);
 }
 
+function rememberFilters() {
+  if (!state.activeSystem) return;
+  state.systemFilters[state.activeSystem] = {
+    mode: elements.mode.value,
+    shop: elements.shop.value,
+    account: elements.account.value,
+    material: elements.material.value,
+    start: elements.start.value,
+    end: elements.end.value,
+  };
+}
+
+function restoreFilters(resetDates) {
+  const saved = state.systemFilters[state.activeSystem];
+  if (!saved || resetDates) return;
+  for (const [key, value] of Object.entries(saved)) {
+    if (!elements[key]) continue;
+    if (elements[key].tagName === "SELECT") {
+      if ([...elements[key].options].some((option) => option.value === value)) elements[key].value = value;
+    } else {
+      elements[key].value = value;
+    }
+  }
+}
+
+function configureWorkspace() {
+  const config = SYSTEMS[state.activeSystem];
+  $("#system-eyebrow").textContent = config.eyebrow;
+  $("#system-title").textContent = config.title;
+  $("#system-description").textContent = config.description;
+  $("#upload-label").textContent = config.upload;
+  $("#empty-title").textContent = config.emptyTitle;
+  $("#empty-copy").textContent = config.emptyCopy;
+  $("#account-label").textContent = config.accountLabel;
+  $("#material-label").textContent = config.materialLabel;
+  $("#range-meta").textContent = config.rangeMeta;
+  $("#mode-field").hidden = state.activeSystem === "taobao";
+  $("#shop-field").hidden = state.activeSystem === "taobao";
+  elements.workspace.dataset.system = state.activeSystem;
+}
+
+function enterSystem(system) {
+  if (!SYSTEMS[system]) return;
+  rememberFilters();
+  const hasSavedFilters = Boolean(state.systemFilters[system]);
+  state.activeSystem = system;
+  const platform = SYSTEMS[system].platform;
+  state.rows = state.allRows.filter((row) => (row.platform || REPORT_META[row.deliveryMode]?.platform || "抖音") === platform);
+  state.analysis = null;
+  state.selected = null;
+  state.materialTier = "all";
+  state.materialQuery = "";
+  state.actionType = "全部";
+  state.actionQuery = "";
+  state.activeTab = "overview";
+  state.analysisCache.clear();
+  state.renderedTabs.clear();
+  configureWorkspace();
+  elements.home.hidden = true;
+  elements.workspace.hidden = false;
+  $$("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === "overview"));
+  $$(".tab-view").forEach((view) => { view.hidden = view.id !== "view-overview"; });
+  updateBounds(!hasSavedFilters);
+  restoreFilters(false);
+  if (state.rows.length) applyAnalysis();
+}
+
 function updateBounds(resetDates = false) {
   const modes = [...new Set(state.rows.map((row) => row.deliveryMode || "推商品").filter(Boolean))].sort();
   const shops = [...new Set(state.rows.map((row) => row.shopCode).filter(Boolean))].sort();
   const accounts = [...new Set(state.rows.map((row) => row.qianchuanId).filter(Boolean))].sort();
+  const materials = [...new Map(state.rows.filter((row) => row.materialId).map((row) => [row.materialId, row.name || row.materialId])).entries()];
   const months = state.rows.map((row) => row.month || row.date?.slice(0, 7)).filter(Boolean).sort();
   const minDate = months[0] || "";
   const maxDate = months.at(-1) || "";
   elements.mode.innerHTML = `<option value="all">全部类型</option>${modes.map((mode) => `<option value="${esc(mode)}">${esc(mode)}</option>`).join("")}`;
   elements.shop.innerHTML = `<option value="all">全部店铺</option>${shops.map((shop) => `<option value="${esc(shop)}">${esc(shop)}</option>`).join("")}`;
-  elements.account.innerHTML = `<option value="all">全部账户</option>${accounts.map((account) => `<option value="${esc(account)}">${esc(account)}</option>`).join("")}`;
+  elements.account.innerHTML = `<option value="all">全部${state.activeSystem === "taobao" ? "计划" : "账户"}</option>${accounts.map((account) => `<option value="${esc(account)}">${esc(account)}</option>`).join("")}`;
+  elements.material.innerHTML = `<option value="all">全部${state.activeSystem === "taobao" ? "主体" : "素材"}</option>${materials.map(([id, name]) => `<option value="${esc(id)}">${esc(id)} · ${esc(name).slice(0, 22)}</option>`).join("")}`;
   if (resetDates || !elements.start.value) elements.start.value = minDate;
   if (resetDates || !elements.end.value) elements.end.value = maxDate;
   elements.start.min = minDate;
@@ -1178,9 +1484,10 @@ function applyAnalysis() {
   const mode = elements.mode.value;
   const shop = elements.shop.value;
   const account = elements.account.value;
+  const material = elements.material.value;
   const start = elements.start.value;
   const end = elements.end.value;
-  const cacheKey = [mode, shop, account, start, end].join("::");
+  const cacheKey = [state.activeSystem, mode, shop, account, material, start, end].join("::");
   const cached = state.analysisCache.get(cacheKey);
   const startedAt = performance.now();
   if (cached) {
@@ -1191,6 +1498,7 @@ function applyAnalysis() {
     state.filteredRows = state.rows.filter((row) => (mode === "all" || row.deliveryMode === mode)
       && (shop === "all" || row.shopCode === shop)
       && (account === "all" || row.qianchuanId === account)
+      && (material === "all" || row.materialId === material)
       && (row.month || row.date.slice(0, 7)) >= start
       && (row.month || row.date.slice(0, 7)) <= end);
     state.analysis = analyzeRows(state.filteredRows);
@@ -1204,6 +1512,7 @@ function applyAnalysis() {
   state.actionPage = 1;
   state.renderedTabs.clear();
   renderActiveTab(true);
+  rememberFilters();
   const elapsed = Math.round(performance.now() - startedAt);
   showNotice(cached ? `已读取分析缓存，耗时 ${elapsed}ms。` : `分析完成，耗时 ${(elapsed / 1000).toFixed(1)}秒；再次使用相同筛选将直接读取缓存。`);
 }
@@ -1213,42 +1522,68 @@ function reportBadge(mode) {
   return `<span class="mode-badge" style="--mode:${meta.color}">${esc(mode)}</span>`;
 }
 
+const isTmallItem = (item) => item.platform === "淘系" || item.deliveryMode === "淘系短视频" || item.mode === "淘系短视频";
+const performanceRoi = (item) => isTmallItem(item) ? item.grossRoi : item.netRoi;
+const performanceRoiLabel = (item) => isTmallItem(item) ? "成交ROI" : "净ROI";
+const videoQualityLabel = (item) => isTmallItem(item) ? "有效观看率" : "完播率";
+
 function compactDailyRow(row) {
   return {
     key: row.key,
     materialKey: row.materialKey,
     schemaVersion: row.schemaVersion,
+    platform: row.platform,
     deliveryMode: row.deliveryMode,
     shopCode: row.shopCode,
     qianchuanId: row.qianchuanId,
     materialId: row.materialId,
     date: row.date,
     spend: row.spend,
+    grossOrders: row.grossOrders,
     grossAmount: row.grossAmount,
     netAmount: row.netAmount,
     netOrders: row.netOrders,
+    videoPlays: row.videoPlays,
+    videoCompletes: row.videoCompletes,
+    effectiveViews: row.effectiveViews,
+    engagements: row.engagements,
+    watchTimeWeighted: row.watchTimeWeighted,
+    favoriteCart: row.favoriteCart,
+    addCart: row.addCart,
+    favorites: row.favorites,
+    guidedVisits: row.guidedVisits,
+    deepVisits: row.deepVisits,
+    newCustomerReach: row.newCustomerReach,
+    newCustomerOrders: row.newCustomerOrders,
+    newCustomerAmount: row.newCustomerAmount,
   };
 }
 
 function renderMetrics() {
   const a = state.analysis;
   const s = a.summary;
+  const hasTmall = a.modeSummaries.some((item) => item.mode === "淘系短视频");
+  const hasDouyin = a.modeSummaries.some((item) => item.mode !== "淘系短视频");
+  const tmallOnly = hasTmall && !hasDouyin;
   const good = a.materials.filter((item) => item.tier === "good");
   const goodSpend = good.reduce((sum, item) => sum + item.spend, 0);
   const goodNet = good.reduce((sum, item) => sum + item.netAmount, 0);
   return `<section class="metric-grid">
     <article><span>投放消耗</span><strong>${money(s.spend)}</strong><small>${a.materials.length} 条素材</small></article>
-    <article><span>整体成交额 / ROI</span><strong>${money(s.grossAmount)}</strong><small>整体ROI ${s.grossRoi.toFixed(2)}</small></article>
-    <article><span>净成交额 / ROI</span><strong class="good-text">${money(s.netAmount)}</strong><small>净ROI ${s.netRoi.toFixed(2)}</small></article>
-    <article><span>退款损失</span><strong class="poor-text">${money(s.refundLoss)}</strong><small>金额损失率 ${pct(s.refundRate)}</small></article>
-    <article><span>整体 / 净订单</span><strong>${fmt(s.grossOrders)}</strong><small>净成交 ${fmt(s.netOrders)} 单</small></article>
+    <article><span>成交金额 / ROI</span><strong>${money(s.grossAmount)}</strong><small>成交ROI ${s.grossRoi.toFixed(2)}</small></article>
+    ${tmallOnly
+      ? `<article><span>收藏加购 / 加购率</span><strong class="good-text">${fmt(s.favoriteCart)}</strong><small>收藏加购率 ${pct(s.favoriteCartRate)}</small></article>
+         <article><span>引导访问 / 访问率</span><strong>${fmt(s.guidedVisits)}</strong><small>引导访问率 ${pct(s.guidedVisitRate)}</small></article>`
+      : `<article><span>${hasTmall ? "综合归因成交" : "净成交额 / ROI"}</span><strong class="good-text">${money(s.netAmount)}</strong><small>${hasTmall ? "淘系按总成交口径" : `净ROI ${s.netRoi.toFixed(2)}`}</small></article>
+         <article><span>抖音退款损失</span><strong class="poor-text">${money(s.refundLoss)}</strong><small>${hasDouyin ? `金额损失率 ${pct(s.refundRate)}` : "淘系报表不含退款字段"}</small></article>`}
+    <article><span>${tmallOnly ? "成交订单 / 新客订单" : "整体 / 净订单"}</span><strong>${fmt(s.grossOrders)}</strong><small>${tmallOnly ? `新客成交 ${fmt(s.newCustomerOrders)} 笔` : `净成交 ${fmt(s.netOrders)} 单`}</small></article>
     <article><span>达到评分门槛</span><strong>${a.thresholds.eligible}</strong><small>消耗 ≥ ¥50</small></article>
     <article><span>优质素材贡献</span><strong>${a.tiers.good} 条</strong><small>消耗${pct(goodSpend / (s.spend || 1))} · 净成交${pct(goodNet / (s.netAmount || 1))}</small></article>
-    <article><span>视频播放 / 完播率</span><strong>${fmt(s.videoPlays)}</strong><small>完播 ${pct(s.videoCompletionRate)} · 3秒 ${pct(s.threeSecondRate)}</small></article>
+    <article><span>${tmallOnly ? "观看 / 有效观看率" : "视频播放 / 完播率"}</span><strong>${fmt(s.videoPlays)}</strong><small>${tmallOnly ? `有效观看 ${pct(s.effectiveViewRate)} · 互动 ${pct(s.interactionRate)}` : `完播 ${pct(s.videoCompletionRate)} · 3秒 ${pct(s.threeSecondRate)}`}</small></article>
   </section>`;
 }
 
-function monthlyChart(data) {
+function monthlyChart(data, tmallOnly = false) {
   if (!data.length) return `<div class="chart-empty">所选范围暂无趋势数据</div>`;
   const width = 760, height = 292, left = 48, right = 44, top = 18, bottom = 34;
   const plotWidth = width - left - right, plotHeight = height - top - bottom;
@@ -1256,10 +1591,10 @@ function monthlyChart(data) {
   const maxRoi = Math.max(...data.map((item) => item.grossRoi), ...data.map((item) => item.netRoi), 1);
   const step = plotWidth / data.length, barWidth = Math.min(34, step * 0.48);
   const points = (key) => data.map((item, index) => `${left + (index + 0.5) * step},${top + plotHeight * (1 - item[key] / maxRoi)}`).join(" ");
-  return `<svg class="trend-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="月度消耗、整体ROI和净ROI趋势">
+  return `<svg class="trend-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${tmallOnly ? "月度消耗和成交ROI趋势" : "月度消耗、整体ROI和净ROI趋势"}">
     ${[0, 0.25, 0.5, 0.75, 1].map((t) => `<line class="grid-line" x1="${left}" x2="${width - right}" y1="${top + plotHeight * t}" y2="${top + plotHeight * t}"/><text class="axis-label" x="${left - 7}" y="${top + plotHeight * t + 4}" text-anchor="end">${fmt(maxSpend * (1 - t) / 10000, 1)}万</text>`).join("")}
     ${data.map((item, index) => { const h = plotHeight * item.spend / maxSpend; return `<rect class="spend-bar" x="${left + (index + 0.5) * step - barWidth / 2}" y="${top + plotHeight - h}" width="${barWidth}" height="${h}" rx="3"><title>${esc(item.month)} 消耗${money(item.spend)} 净ROI ${item.netRoi.toFixed(2)}</title></rect>`; }).join("")}
-    <polyline points="${points("grossRoi")}" class="gross-line"/><polyline points="${points("netRoi")}" class="roi-line"/>
+    <polyline points="${points("grossRoi")}" class="${tmallOnly ? "roi-line" : "gross-line"}"/>${tmallOnly ? "" : `<polyline points="${points("netRoi")}" class="roi-line"/>`}
     ${data.map((item, index) => `<text class="axis-label" x="${left + (index + 0.5) * step}" y="${height - 8}" text-anchor="middle">${esc(item.month.slice(5))}</text>`).join("")}
   </svg>`;
 }
@@ -1267,19 +1602,24 @@ function monthlyChart(data) {
 function renderOverview() {
   const a = state.analysis;
   const s = a.summary;
+  const hasTmall = a.modeSummaries.some((item) => item.mode === "淘系短视频");
+  const hasDouyin = a.modeSummaries.some((item) => item.mode !== "淘系短视频");
+  const tmallOnly = hasTmall && !hasDouyin;
+  const tmallSummary = a.modeSummaries.find((item) => item.mode === "淘系短视频") || s;
   const maxCategory = Math.max(...a.categories.map((item) => item.spend), 1);
   $("#view-overview").innerHTML = `${renderMetrics()}
     <section class="insight-grid">
-      <article><b>双模型评分</b><p>推商品更侧重商品成交与退款质量；推直播提高点击、完播和前5秒留存权重，两类素材不共用排名基准。</p></article>
-      <article><b>退款侵蚀</b><p>整体ROI ${s.grossRoi.toFixed(2)} 降至净ROI ${s.netRoi.toFixed(2)}，退款造成 ${money(s.refundLoss)} 成交损失。</p></article>
-      <article><b>评分可信度</b><p>采用¥${a.thresholds.priorWeight}先验权重收缩小样本ROI，并纳入完播、3秒和5秒播放质量。</p></article>
+      <article><b>平台独立评分</b><p>${tmallOnly ? "淘系以成交ROI为核心，结合有效观看、收藏加购、访问深度和新客效率。" : "抖音推商品、推直播与淘系短视频分别建模，不共用排名基准。"}</p></article>
+      <article><b>${tmallOnly ? "内容到成交" : "退款与成交质量"}</b><p>${tmallOnly ? `有效观看率 ${pct(s.effectiveViewRate)}，收藏加购率 ${pct(s.favoriteCartRate)}，引导访问率 ${pct(s.guidedVisitRate)}。` : `整体ROI ${s.grossRoi.toFixed(2)}，净ROI ${s.netRoi.toFixed(2)}，退款造成 ${money(s.refundLoss)} 成交损失。`}</p></article>
+      <article><b>评分可信度</b><p>采用¥${a.thresholds.priorWeight}先验权重收缩小样本ROI；${tmallOnly ? "淘系内容分由有效观看、观看时长、互动和收藏加购组成。" : "抖音内容分纳入完播、3秒和5秒播放质量。"}</p></article>
     </section>
+    ${hasTmall ? `<section class="commerce-funnel panel"><div class="panel-head"><div><h2>淘系内容成交漏斗</h2><p>从观看质量到访问、收藏加购与成交</p></div></div><div class="funnel-flow"><article><span>观看量</span><strong>${fmt(tmallSummary.videoPlays)}</strong></article><i>→</i><article><span>有效观看</span><strong>${fmt(tmallSummary.effectiveViews)}</strong><small>${pct(tmallSummary.effectiveViewRate)}</small></article><i>→</i><article><span>引导访问</span><strong>${fmt(tmallSummary.guidedVisits)}</strong><small>${pct(tmallSummary.guidedVisitRate)}</small></article><i>→</i><article><span>收藏加购</span><strong>${fmt(tmallSummary.favoriteCart)}</strong><small>${pct(tmallSummary.favoriteCartRate)}</small></article><i>→</i><article><span>成交订单</span><strong>${fmt(tmallSummary.grossOrders)}</strong><small>ROI ${tmallSummary.grossRoi.toFixed(2)}</small></article></div></section>` : ""}
     <section class="two-column">
-      <article class="panel"><div class="panel-head"><div><h2>月度经营趋势</h2><p>消耗柱 · 整体ROI线 · 净ROI线</p></div><div class="chart-legend"><i class="spend"></i>消耗<i class="gross"></i>整体ROI<i class="net"></i>净ROI</div></div>${monthlyChart(a.monthly)}</article>
+      <article class="panel"><div class="panel-head"><div><h2>月度经营趋势</h2><p>${tmallOnly ? "消耗柱 · 成交ROI线" : "消耗柱 · 整体ROI线 · 净ROI线"}</p></div><div class="chart-legend"><i class="spend"></i>消耗${tmallOnly ? `<i class="net"></i>成交ROI` : `<i class="gross"></i>整体ROI<i class="net"></i>净ROI`}</div></div>${monthlyChart(a.monthly, tmallOnly)}</article>
       <article class="panel"><div class="panel-head"><div><h2>等级分布</h2><p>按当前筛选范围重新计算</p></div></div><table><thead><tr><th>等级</th><th>素材数</th><th>占比</th></tr></thead><tbody>${["good", "normal", "poor"].map((tier) => `<tr><td><span class="tier ${tier}">${TIER_LABELS[tier]}</span></td><td>${a.tiers[tier]}</td><td>${pct(a.tiers[tier] / (a.materials.length || 1))}</td></tr>`).join("")}</tbody></table></article>
     </section>
-    <section class="panel"><div class="panel-head"><div><h2>投放类型表现</h2><p>两类报表分别评分，经营结果在此汇总对比</p></div></div><div class="mode-summary">${a.modeSummaries.map((item) => `<article style="--mode:${REPORT_META[item.mode].color}"><div>${reportBadge(item.mode)}<b>${item.count}条素材</b></div><span>消耗<strong>${money(item.spend)}</strong></span><span>净ROI<strong>${item.netRoi.toFixed(2)}</strong></span><span>完播率<strong>${pct(item.videoCompletionRate)}</strong></span><span>有效评分<strong>${item.eligible}</strong></span></article>`).join("")}</div></section>
-    <section class="panel"><div class="panel-head"><div><h2>品类经营表现</h2><p>根据素材名称关键词自动归类</p></div></div><div class="category-list">${a.categories.map((item) => `<div class="category-row"><div class="category-name"><b>${esc(item.name)}</b><small>${item.count}条</small></div><div class="bar-track"><i style="width:${item.spend / maxCategory * 100}%"></i></div><span>${money(item.spend)}</span><span>净ROI ${item.netRoi.toFixed(2)}</span><span>退款 ${pct(item.refundRate)}</span></div>`).join("")}</div></section>`;
+    <section class="panel"><div class="panel-head"><div><h2>投放类型表现</h2><p>各平台分别评分，经营结果在此汇总对比</p></div></div><div class="mode-summary">${a.modeSummaries.map((item) => `<article style="--mode:${REPORT_META[item.mode].color}"><div>${reportBadge(item.mode)}<b>${item.count}条素材</b></div><span>消耗<strong>${money(item.spend)}</strong></span><span>${performanceRoiLabel(item)}<strong>${performanceRoi(item).toFixed(2)}</strong></span><span>${videoQualityLabel(item)}<strong>${pct(isTmallItem(item) ? item.effectiveViewRate : item.videoCompletionRate)}</strong></span><span>有效评分<strong>${item.eligible}</strong></span></article>`).join("")}</div></section>
+    <section class="panel"><div class="panel-head"><div><h2>品类经营表现</h2><p>根据素材名称关键词自动归类</p></div></div><div class="category-list">${a.categories.map((item) => `<div class="category-row"><div class="category-name"><b>${esc(item.name)}</b><small>${item.count}条</small></div><div class="bar-track"><i style="width:${item.spend / maxCategory * 100}%"></i></div><span>${money(item.spend)}</span><span>${tmallOnly ? "成交ROI" : "净ROI"} ${(tmallOnly ? item.grossRoi : item.netRoi).toFixed(2)}</span><span>${tmallOnly ? `收藏加购 ${pct(item.favoriteCartRate)}` : `退款 ${pct(item.refundRate)}`}</span></div>`).join("")}</div></section>`;
 }
 
 function filteredMaterials() {
@@ -1338,13 +1678,18 @@ async function renderMaterialDetail() {
   }
   if (state.selected?.materialKey !== selectedKey) return;
   const trend = buildTrend(dailyRows, item);
+  const tmall = isTmallItem(item);
   const settlementRows = [[7, item.settlement7Roi, item.settlement7Rate], [14, item.settlement14Roi, item.settlement14Rate], [30, item.settlement30Roi, item.settlement30Rate], [90, item.settlement90Roi, item.settlement90Rate]];
   container.innerHTML = `<div class="detail-top"><span class="tier ${item.tier}">${TIER_LABELS[item.tier]} · ${item.score}分</span><span>${reportBadge(item.deliveryMode)} <span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></span></div>
-    <h2>${esc(item.name)}</h2><div class="material-id">店铺 ${esc(item.shopCode)} · 千川ID ${esc(item.qianchuanId || "-")} · 素材ID ${esc(item.id)}${item.videoType ? ` · ${esc(item.videoType)}` : ""}</div>
+    <h2>${esc(item.name)}</h2><div class="material-id">${tmall ? `计划 ${esc(item.planName || item.qianchuanId || "-")} · 主体ID ${esc(item.id)}${item.itemId ? ` · 宝贝ID ${esc(item.itemId)}` : ""}` : `店铺 ${esc(item.shopCode)} · 千川ID ${esc(item.qianchuanId || "-")} · 素材ID ${esc(item.id)}`}${item.videoType ? ` · ${esc(item.videoType)}` : ""}</div>
     <div class="decision-note"><b>分析理由：</b>${esc(item.reason)}<br><b>建议：</b>${esc(item.action)}</div>
-    <div class="detail-metrics"><div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>净ROI</span><strong>${item.netRoi.toFixed(2)}</strong></div><div><span>净成交</span><strong>${money(item.netAmount)}</strong></div><div><span>退款损失率</span><strong>${pct(item.refund)}</strong></div><div><span>视频播放</span><strong>${fmt(item.videoPlays)}</strong></div><div><span>完播 / 3秒</span><strong>${pct(item.videoCompletionRate)} / ${pct(item.threeSecondRate)}</strong></div><div><span>平均观看</span><strong>${fmt(item.avgWatchTime, 2)}秒</strong></div><div><span>内容质量分</span><strong>${item.contentScore.toFixed(0)}</strong></div></div>
-    <div class="settlement-grid">${settlementRows.map(([days, roi, rate]) => `<div><span>${days}日结算</span><b>ROI ${roi.toFixed(2)}</b><small>GMV结算率 ${pct(rate)}</small></div>`).join("")}</div>
-    <div class="panel-head"><div><h2>素材投放趋势</h2><p>日消耗柱 · 7日滚动净ROI线 · 顶部生命周期阶段</p></div></div>${lifecycleChart(trend)}`;
+    <div class="detail-metrics">${tmall
+      ? `<div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>成交ROI</span><strong>${item.grossRoi.toFixed(2)}</strong></div><div><span>成交金额</span><strong>${money(item.grossAmount)}</strong></div><div><span>成交订单</span><strong>${fmt(item.grossOrders)}</strong></div><div><span>有效观看率</span><strong>${pct(item.effectiveViewRate)}</strong></div><div><span>收藏加购率</span><strong>${pct(item.favoriteCartRate)}</strong></div><div><span>引导访问率</span><strong>${pct(item.guidedVisitRate)}</strong></div><div><span>内容质量分</span><strong>${item.contentScore.toFixed(0)}</strong></div>`
+      : `<div><span>消耗</span><strong>${money(item.spend)}</strong></div><div><span>净ROI</span><strong>${item.netRoi.toFixed(2)}</strong></div><div><span>净成交</span><strong>${money(item.netAmount)}</strong></div><div><span>退款损失率</span><strong>${pct(item.refund)}</strong></div><div><span>视频播放</span><strong>${fmt(item.videoPlays)}</strong></div><div><span>完播 / 3秒</span><strong>${pct(item.videoCompletionRate)} / ${pct(item.threeSecondRate)}</strong></div><div><span>平均观看</span><strong>${fmt(item.avgWatchTime, 2)}秒</strong></div><div><span>内容质量分</span><strong>${item.contentScore.toFixed(0)}</strong></div>`}</div>
+    ${tmall
+      ? `<div class="settlement-grid"><div><span>直接成交</span><b>${money(item.directGrossAmount)}</b><small>占比 ${pct(item.directAmountShare)}</small></div><div><span>间接成交</span><b>${money(item.indirectGrossAmount)}</b><small>内容归因延展</small></div><div><span>新客成交</span><b>${fmt(item.newCustomerOrders)} 笔</b><small>${money(item.newCustomerAmount)}</small></div><div><span>平均有效观看</span><b>${fmt(item.avgWatchTime, 1)}秒</b><small>互动率 ${pct(item.interactionRate)}</small></div></div>`
+      : `<div class="settlement-grid">${settlementRows.map(([days, roi, rate]) => `<div><span>${days}日结算</span><b>ROI ${roi.toFixed(2)}</b><small>GMV结算率 ${pct(rate)}</small></div>`).join("")}</div>`}
+    <div class="panel-head"><div><h2>素材投放趋势</h2><p>日消耗柱 · 7日滚动${tmall ? "成交" : "净"}ROI线 · 顶部生命周期阶段</p></div></div>${lifecycleChart(trend)}`;
 }
 
 function renderMaterials() {
@@ -1353,15 +1698,21 @@ function renderMaterials() {
   state.materialPage = Math.min(Math.max(1, state.materialPage), pages);
   const offset = (state.materialPage - 1) * MATERIAL_PAGE_SIZE;
   const items = allItems.slice(offset, offset + MATERIAL_PAGE_SIZE);
-  $("#view-materials").innerHTML = `<section class="tier-grid">
-    <article><span>全部素材</span><strong>${state.analysis.materials.length}</strong><small>当前筛选范围</small></article>
-    ${["good", "normal", "poor"].map((tier) => `<article><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))}</small></article>`).join("")}
+  $("#view-materials").innerHTML = `<section class="tier-grid" aria-label="按素材等级筛选">
+    <button type="button" data-tier-card="all" class="${state.materialTier === "all" ? "active" : ""}" aria-pressed="${state.materialTier === "all"}"><span>全部素材</span><strong>${state.analysis.materials.length}</strong><small>点击查看全部</small></button>
+    ${["good", "normal", "poor"].map((tier) => `<button type="button" data-tier-card="${tier}" class="${state.materialTier === tier ? `active ${tier}` : tier}" aria-pressed="${state.materialTier === tier}"><span>${TIER_LABELS[tier]}素材</span><strong>${state.analysis.tiers[tier]}</strong><small>${pct(state.analysis.tiers[tier] / (state.analysis.materials.length || 1))} · 点击筛选</small></button>`).join("")}
     </section>
-    <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><div class="score-title"><b>素材评分明细</b><span class="score-help"><button type="button" class="score-help-button" aria-describedby="score-definition">评分定义 <i>?</i></button><span id="score-definition" class="score-tooltip" role="tooltip"><strong>素材评分口径（0–100分）</strong><span><b>分级：</b>优质 ≥ 70分；普通 40–69分；劣质 ＜ 40分。</span><span><b>样本门槛：</b>所选周期消耗不足 ¥50 时记为0分，不进入稳定评分。</span><span><b>相对评价：</b>推商品与推直播分别在同类素材中排名，日期、店铺或账户改变后会重新计算。</span><span><b>核心指标：</b>贝叶斯整体/净ROI、点击率、转化率、净成交、消耗、退款质量、完播率及3秒/5秒留存；使用 ¥200 先验权重降低小样本波动。</span><span><b>内容质量分：</b>先将完播率、3秒播放率和5秒播放率转换为同类素材百分位；推商品三项各占约33.3%，推直播分别占40%、30%、30%。该分数反映相对留存水平，不等同于实际完播率；消耗不足 ¥50 时为0分。</span></span></span></div><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
-      <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>净ROI</th><th>退款</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.materialPage, allItems.length, MATERIAL_PAGE_SIZE, "materials")}</div>
+    <section class="workspace"><div class="table-panel"><div class="table-head"><div class="toolbar"><div><div class="score-title"><b>素材评分明细</b><span class="score-help"><button type="button" class="score-help-button" aria-describedby="score-definition">评分定义 <i>?</i></button><span id="score-definition" class="score-tooltip" role="tooltip"><strong>素材评分口径（0–100分）</strong><span><b>分级：</b>优质 ≥ 70分；普通 40–69分；劣质 ＜ 40分。</span><span><b>样本门槛：</b>所选周期消耗不足 ¥50 时记为0分，不进入稳定评分。</span><span><b>平台隔离：</b>抖音推商品、推直播和淘系短视频分别在同类素材中排名，筛选范围改变后重新计算。</span><span><b>抖音模型：</b>以贝叶斯整体/净ROI、转化、点击、退款质量和视频留存综合评分。</span><span><b>淘系模型：</b>成交ROI 24%、转化14%、点击8%、净成交规模8%、消耗5%，有效观看12%、平均有效观看6%、互动5%、收藏加购8%、访问5%、新客5%。</span><span><b>内容质量分：</b>抖音使用完播、3秒和5秒留存；淘系使用有效观看40%、平均有效观看20%、互动15%、收藏加购25%。均为同类素材百分位综合分，不等于原始比率。</span></span></span></div><p>点击素材查看投放趋势</p></div><div class="toolbar-group"><label class="field">等级<select id="tier-filter"><option value="all">全部等级</option><option value="good">优质</option><option value="normal">普通</option><option value="poor">劣质</option></select></label><label class="field">素材ID或名称<input id="material-search" placeholder="输入素材ID或名称"></label></div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>素材</th><th>投放类型</th><th>功能画像</th><th>评分</th><th>内容分</th><th>消耗</th><th>ROI口径</th><th>质量信号</th></tr></thead><tbody>${items.map((item, index) => `<tr data-material="${index}" class="${state.selected?.id === item.id && state.selected?.shopCode === item.shopCode && state.selected?.deliveryMode === item.deliveryMode && state.selected?.qianchuanId === item.qianchuanId ? "selected" : ""}"><td class="material-name">${esc(item.name)}<small>${esc(item.id)} · ${esc(item.shopCode)} · ${esc(item.qianchuanId || "-")}</small></td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td><span class="tier ${item.tier}">${item.score} · ${TIER_LABELS[item.tier]}</span></td><td>${item.contentScore.toFixed(0)}</td><td>${money(item.spend)}</td><td>${performanceRoiLabel(item)} ${performanceRoi(item).toFixed(2)}</td><td>${isTmallItem(item) ? `收藏加购 ${pct(item.favoriteCartRate)}` : `退款 ${pct(item.refund)}`}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.materialPage, allItems.length, MATERIAL_PAGE_SIZE, "materials")}</div>
       <aside id="material-detail" class="detail-panel"></aside></section>`;
   $("#tier-filter").value = state.materialTier;
   $("#material-search").value = state.materialQuery;
+  $$("[data-tier-card]").forEach((button) => button.addEventListener("click", () => {
+    state.materialTier = button.dataset.tierCard;
+    state.materialPage = 1;
+    state.selected = null;
+    renderMaterials();
+  }));
   $("#tier-filter").addEventListener("change", (event) => { state.materialTier = event.target.value; state.materialPage = 1; state.selected = null; renderMaterials(); });
   const applyMaterialSearch = debounce((value) => { state.materialQuery = value; state.materialPage = 1; state.selected = null; renderMaterials(); });
   $("#material-search").addEventListener("input", (event) => applyMaterialSearch(event.target.value));
@@ -1381,8 +1732,8 @@ function renderMaterials() {
 }
 
 function renderFunctional() {
-  $("#view-functional").innerHTML = `<section class="function-grid">${state.analysis.functions.map((item) => { const meta = FUNCTION_META[item.type]; return `<article style="--func:${meta.color}"><div class="function-head"><i></i><h2>${esc(item.type)}</h2><b>${item.count}条</b></div><p>${esc(meta.description)}</p><div class="function-metrics"><span>素材占比<b>${pct(item.share)}</b></span><span>消耗占比<b>${pct(item.spendShare)}</b></span><span>净ROI<b>${item.netRoi.toFixed(2)}</b></span><span>净成交占比<b>${pct(item.netShare)}</b></span><span>退款损失率<b>${pct(item.refundRate)}</b></span></div></article>`; }).join("")}</section>
-    <section class="panel"><div class="panel-head"><div><h2>功能画像判定逻辑</h2><p>两类报表的阈值分别计算，画像名称保持统一</p></div></div><p>爆款型：点击、转化、净ROI同时较高；精品型：低消耗、高净ROI；引流型：点击较高但转化偏低；损耗型：消耗较高但净ROI偏低；误导型：点击较高且退款损失率达到15%以上。综合评分额外纳入完播率、3秒和5秒播放率。</p></section>`;
+  $("#view-functional").innerHTML = `<section class="function-grid">${state.analysis.functions.map((item) => { const meta = FUNCTION_META[item.type] || FUNCTION_META["其他"]; return `<article style="--func:${meta.color}"><div class="function-head"><i></i><h2>${esc(item.type)}</h2><b>${item.count}条</b></div><p>${esc(meta.description)}</p><div class="function-metrics"><span>素材占比<b>${pct(item.share)}</b></span><span>消耗占比<b>${pct(item.spendShare)}</b></span><span>成交ROI<b>${Number(item.grossRoi || 0).toFixed(2)}</b></span><span>成交占比<b>${pct(item.netShare)}</b></span><span>${item.favoriteCart ? "收藏加购率" : "退款损失率"}<b>${pct(item.favoriteCart ? item.favoriteCartRate : item.refundRate)}</b></span></div></article>`; }).join("")}</section>
+    <section class="panel"><div class="panel-head"><div><h2>功能画像判定逻辑</h2><p>各平台阈值分别计算，画像名称保持统一</p></div></div><p>爆款型：点击、转化和ROI同时较高；精品型：低消耗、高ROI；引流型：点击或访问较高但转化偏低；损耗型：消耗较高但ROI偏低。抖音可根据退款识别误导型；淘系报表不含退款字段，因此不强行判断误导型。</p></section>`;
 }
 
 function renderActions() {
@@ -1398,7 +1749,7 @@ function renderActions() {
   const items = allItems.slice(offset, offset + ACTION_PAGE_SIZE);
   $("#view-actions").innerHTML = `<section class="panel"><div class="panel-head"><div><h2>功能画像行动清单</h2><p>按统一的素材运营角色查看建议，共${allItems.length}条</p></div></div>
     <div class="toolbar"><div class="action-filter">${types.map((type) => `<button type="button" data-action-type="${esc(type)}" class="${state.actionType === type ? "active" : ""}" style="--dot:${type === "全部" ? "#19213a" : FUNCTION_META[type].color}"><i></i>${esc(type)} <b>${counts.get(type) || 0}</b></button>`).join("")}</div><label class="field">素材ID或名称<input id="action-search" placeholder="输入素材ID或名称" value="${esc(state.actionQuery)}"></label></div>
-    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>投放类型</th><th>功能画像</th><th>品类</th><th>消耗</th><th>净ROI</th><th>退款</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}<small>${esc(item.qianchuanId || "-")}</small></td><td>${esc(item.id)}</td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${item.netRoi.toFixed(2)}</td><td>${pct(item.refund)}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.actionPage, allItems.length, ACTION_PAGE_SIZE, "actions")}</section>`;
+    <div class="table-wrap"><table><thead><tr><th>素材名称</th><th>素材ID</th><th>投放类型</th><th>功能画像</th><th>品类</th><th>消耗</th><th>ROI口径</th><th>质量信号</th><th>建议动作</th></tr></thead><tbody>${items.map((item) => `<tr><td class="material-name">${esc(item.name)}<small>${esc(item.qianchuanId || "-")}</small></td><td>${esc(item.id)}</td><td>${reportBadge(item.deliveryMode)}</td><td><span class="function-badge" style="--func:${FUNCTION_META[item.functionalType].color}">${esc(item.functionalType)}</span></td><td>${esc(item.category)}</td><td>${money(item.spend)}</td><td>${performanceRoiLabel(item)} ${performanceRoi(item).toFixed(2)}</td><td>${isTmallItem(item) ? `收藏加购 ${pct(item.favoriteCartRate)}` : `退款 ${pct(item.refund)}`}</td><td class="action-copy">${esc(item.action)}</td></tr>`).join("")}</tbody></table></div>${paginationMarkup(state.actionPage, allItems.length, ACTION_PAGE_SIZE, "actions")}</section>`;
   $$('[data-action-type]').forEach((button) => button.addEventListener("click", () => { state.actionType = button.dataset.actionType; state.actionPage = 1; renderActions(); }));
   const applyActionSearch = debounce((value) => { state.actionQuery = value; state.actionPage = 1; renderActions(); });
   $("#action-search").addEventListener("input", (event) => applyActionSearch(event.target.value));
@@ -1418,12 +1769,19 @@ function renderActiveTab(force = false) {
     functional: renderFunctional,
     actions: renderActions,
   };
-  renderers[state.activeTab]?.();
-  state.renderedTabs.add(state.activeTab);
+  try {
+    renderers[state.activeTab]?.();
+    state.renderedTabs.add(state.activeTab);
+  } catch (error) {
+    const container = $(`#view-${state.activeTab}`);
+    if (container) container.innerHTML = `<section class="panel render-error"><h2>该模块暂时无法展示</h2><p>数据仍然保留，请刷新页面后重试。</p></section>`;
+    console.error(`模块渲染失败：${state.activeTab}`, error);
+  }
 }
 
 async function handleUpload(file) {
   if (!file) return;
+  const expectedPlatform = SYSTEMS[state.activeSystem].platform;
   showNotice("正在解析 Excel，请稍候…");
   try {
     let rows = [];
@@ -1432,6 +1790,7 @@ async function handleUpload(file) {
     if (file.size >= 50 * 1024 * 1024) {
       ({ monthlyRows, counts } = await readLargeXlsx(file, {
         collectRows: false,
+        allowedPlatform: expectedPlatform,
         onProgress: (message) => showNotice(message),
         onBatch: (batch) => saveRows(batch.map(compactDailyRow), (saved, total) => showNotice(`正在保存当前批次：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 行…`)),
       }));
@@ -1444,7 +1803,11 @@ async function handleUpload(file) {
         const headers = Object.keys(raw[0]);
         const reportType = detectReportType(headers, sheetName);
         if (!reportType) continue;
-        const missing = validateReportHeaders(headers);
+        const reportPlatform = reportType === "淘系短视频" ? "淘系" : "抖音";
+        if (reportPlatform !== expectedPlatform) {
+          throw new Error(`当前是${state.activeSystem === "taobao" ? "淘宝" : "抖音"}系统，请上传对应平台的报表`);
+        }
+        const missing = validateReportHeaders(headers, reportType);
         if (missing.length) throw new Error(`${sheetName}缺少字段：${missing.join("、")}`);
         const normalized = raw.map((row) => normalizeExcelRow(row, reportType)).filter((row) => !row.isSummary && row.materialId && /^\d{4}-\d{2}-\d{2}$/.test(row.date));
         rows.push(...normalized);
@@ -1458,7 +1821,8 @@ async function handleUpload(file) {
     if (!importedCount || !monthlyRows.length) throw new Error("未识别到有效的素材ID与日期");
     await saveMonthlyRows(monthlyRows, (saved, total) => showNotice(`正在保存月度汇总：${saved.toLocaleString("zh-CN")} / ${total.toLocaleString("zh-CN")} 条…`));
     rows = [];
-    state.rows = normalizeStoredRows(await readMonthlyRows());
+    state.allRows = normalizeStoredRows(await readMonthlyRows());
+    state.rows = state.allRows.filter((row) => (row.platform || REPORT_META[row.deliveryMode]?.platform || "抖音") === expectedPlatform);
     state.analysisCache.clear();
     updateBounds(true);
     applyAnalysis();
@@ -1474,15 +1838,23 @@ async function handleUpload(file) {
 elements.file.addEventListener("change", (event) => handleUpload(event.target.files?.[0]));
 $("#reanalyze").addEventListener("click", applyAnalysis);
 $("#clear-data").addEventListener("click", async () => {
-  if (!state.rows.length || !confirm("确定清空当前浏览器保存的全部素材数据吗？")) return;
-  await clearRows();
+  const systemName = state.activeSystem === "taobao" ? "淘宝" : "抖音";
+  if (!state.rows.length || !confirm(`确定只清空${systemName}系统保存的素材数据吗？另一系统的数据不会受影响。`)) return;
+  await clearPlatformRows(SYSTEMS[state.activeSystem].platform);
+  state.allRows = state.allRows.filter((row) => (row.platform || REPORT_META[row.deliveryMode]?.platform || "抖音") !== SYSTEMS[state.activeSystem].platform);
   state.rows = [];
   state.analysis = null;
   state.selected = null;
   state.analysisCache.clear();
   state.renderedTabs.clear();
   updateBounds(true);
-  showNotice("本地数据已清空。");
+  showNotice(`${systemName}系统的本地数据已清空，另一系统数据保持不变。`);
+});
+$$("[data-enter-system]").forEach((button) => button.addEventListener("click", () => enterSystem(button.dataset.enterSystem)));
+$("#back-home").addEventListener("click", () => {
+  rememberFilters();
+  elements.workspace.hidden = true;
+  elements.home.hidden = false;
 });
 $$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
   state.activeTab = button.dataset.tab;
@@ -1492,16 +1864,14 @@ $$('[data-tab]').forEach((button) => button.addEventListener("click", () => {
 }));
 
 try {
-  state.rows = normalizeStoredRows(await readMonthlyRows());
-  if (!state.rows.length) {
+  state.allRows = normalizeStoredRows(await readMonthlyRows());
+  if (!state.allRows.length) {
     const legacyRows = normalizeStoredRows(await readRows());
     if (legacyRows.length) {
-      state.rows = aggregateMonthlyRows(legacyRows);
-      await saveMonthlyRows(state.rows);
+      state.allRows = aggregateMonthlyRows(legacyRows);
+      await saveMonthlyRows(state.allRows);
     }
   }
-  updateBounds(true);
-  if (state.rows.length) applyAnalysis();
 } catch (error) {
   showNotice("无法读取浏览器本地数据，请确认未禁用 IndexedDB。", true);
 }

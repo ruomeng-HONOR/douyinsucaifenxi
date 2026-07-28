@@ -18,8 +18,8 @@ const script = [
 ].join("\n\n");
 
 const standalone = html
-  .replace('<link rel="stylesheet" href="./styles.css">', () => `<style>\n${css}\n</style>`)
+  .replace(/<link rel="stylesheet" href="\.\/styles\.css[^"]*">/, () => `<style>\n${css}\n</style>`)
   .replace('<script src="./xlsx.full.min.js"></script>', () => `<script>\n${xlsx}\n</script>`)
-  .replace('<script type="module" src="./app.js"></script>', () => `<script type="module">\n${script}\n</script>`);
+  .replace(/<script type="module" src="\.\/app\.js[^"]*"><\/script>/, () => `<script type="module">\n${script}\n</script>`);
 
 await writeFile(new URL("./standalone.html", import.meta.url), standalone, "utf8");

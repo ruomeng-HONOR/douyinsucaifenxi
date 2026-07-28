@@ -87,3 +87,26 @@ export async function clearRows() {
     transaction.onerror = () => reject(transaction.error);
   });
 }
+
+function rowPlatform(row) {
+  return row?.platform || (row?.deliveryMode === "淘系短视频" ? "淘系" : "抖音");
+}
+
+export async function clearPlatformRows(platform) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE, MONTHLY_STORE], "readwrite");
+    for (const storeName of [STORE, MONTHLY_STORE]) {
+      const request = transaction.objectStore(storeName).openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        if (rowPlatform(cursor.value) === platform) cursor.delete();
+        cursor.continue();
+      };
+    }
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error || new Error("本地数据清理被中止"));
+  });
+}

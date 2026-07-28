@@ -73,3 +73,56 @@ test("scores product and live materials in separate cohorts", () => {
   assert.equal(analysis.thresholds.byMode["推直播"].eligible, 1);
   assert.equal(analysis.modeSummaries.length, 2);
 });
+
+test("detects, normalizes and scores Wanxiangtai short-video rows", () => {
+  const headers = ["日期", "计划ID", "计划名字", "主体ID", "主体类型", "主体名称", "展现量", "点击量", "花费", "观看量", "有效观看量", "平均有效观看时长", "互动量", "总成交金额", "总成交笔数", "宝贝收藏加购数", "引导访问量", "新客成交笔数", "新客成交金额", "宝贝ID"];
+  assert.equal(detectReportType(headers, "Sheet1"), "淘系短视频");
+  assert.deepEqual(validateReportHeaders(headers, "淘系短视频"), []);
+
+  const row = normalizeExcelRow({
+    "日期": "2026-07-26",
+    "计划ID": "14670816987",
+    "计划名字": "出行个护_干发喷雾",
+    "主体ID": "1278019715722414",
+    "主体类型": "短视频",
+    "主体名称": "油头救星，一喷蓬松",
+    "展现量": 1000,
+    "点击量": 80,
+    "花费": 100,
+    "观看量": 950,
+    "有效观看量": 190,
+    "平均有效观看时长": 20,
+    "互动量": 10,
+    "总成交金额": 500,
+    "总成交笔数": 12,
+    "直接成交金额": 400,
+    "间接成交金额": 100,
+    "宝贝收藏加购数": 20,
+    "宝贝加购数": 15,
+    "引导访问量": 300,
+    "新客触达数": 60,
+    "新客成交笔数": 8,
+    "新客成交金额": 360,
+    "宝贝ID": "741040714529",
+  }, "淘系短视频");
+
+  assert.equal(row.platform, "淘系");
+  assert.equal(row.deliveryMode, "淘系短视频");
+  assert.equal(row.materialId, "1278019715722414");
+  assert.equal(row.netAmount, 500);
+  assert.equal(row.effectiveViews, 190);
+  assert.equal(row.favoriteCart, 20);
+
+  const analysis = analyzeRows([row]);
+  const material = analysis.materials[0];
+  assert.equal(material.platform, "淘系");
+  assert.equal(material.grossRoi, 5);
+  assert.equal(material.effectiveViewRate, 0.2);
+  assert.equal(material.favoriteCartRate, 0.25);
+  assert.equal(material.contentScore, 100);
+  assert.equal(analysis.modeSummaries[0].mode, "淘系短视频");
+  const functional = analysis.functions.find((item) => item.type === material.functionalType);
+  assert.equal(functional.grossRoi, 5);
+  assert.equal(functional.favoriteCart, 20);
+  assert.equal(functional.favoriteCartRate, 0.25);
+});

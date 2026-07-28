@@ -1,8 +1,9 @@
 export const TIER_LABELS = { good: "优质", normal: "普通", poor: "劣质" };
 
 export const REPORT_META = {
-  "推商品": { color: "#2f6bff", description: "以商品成交效率、净ROI和退款质量为主，兼顾视频留存" },
-  "推直播": { color: "#9b5de5", description: "以直播成交效率为主，提高点击与视频留存的评分权重" },
+  "推商品": { platform: "抖音", color: "#2f6bff", description: "以商品成交效率、净ROI和退款质量为主，兼顾视频留存" },
+  "推直播": { platform: "抖音", color: "#9b5de5", description: "以直播成交效率为主，提高点击与视频留存的评分权重" },
+  "淘系短视频": { platform: "淘系", color: "#f08c2e", description: "以总成交ROI为核心，结合有效观看、收藏加购、访问深度和新客效率" },
 };
 
 export const FUNCTION_META = {
@@ -29,6 +30,13 @@ const FIELD_ALIASES = {
 const SCORE_WEIGHTS = {
   "推商品": { gross: 0.20, net: 0.20, cvr: 0.12, ctr: 0.08, amount: 0.08, spend: 0.07, refund: 0.10, complete: 0.05, threeSecond: 0.05, fiveSecond: 0.05 },
   "推直播": { gross: 0.17, net: 0.18, cvr: 0.10, ctr: 0.10, amount: 0.07, spend: 0.08, refund: 0.10, complete: 0.08, threeSecond: 0.06, fiveSecond: 0.06 },
+  "淘系短视频": { gross: 0.24, cvr: 0.14, ctr: 0.08, amount: 0.08, spend: 0.05, effective: 0.12, avgWatch: 0.06, interaction: 0.05, favoriteCart: 0.08, visit: 0.05, newCustomer: 0.05 },
+};
+
+const CONTENT_WEIGHTS = {
+  "推商品": { complete: 1 / 3, threeSecond: 1 / 3, fiveSecond: 1 / 3 },
+  "推直播": { complete: 0.40, threeSecond: 0.30, fiveSecond: 0.30 },
+  "淘系短视频": { effective: 0.40, avgWatch: 0.20, interaction: 0.15, favoriteCart: 0.25 },
 };
 
 const n = (value) => Number(value) || 0;
@@ -69,14 +77,22 @@ export function percentValue(value) {
 
 export function detectReportType(headers = [], sheetName = "") {
   const names = new Set(headers);
+  if ((names.has("主体ID") && names.has("主体名称") && names.has("总成交金额"))
+    || (names.has("有效观看量") && names.has("宝贝收藏加购数") && names.has("宝贝ID"))
+    || /万相台|超级短视频|淘系|天猫/.test(sheetName)) return "淘系短视频";
   if (/直播/.test(sheetName) || names.has("全域素材视频类型") || names.has("基础消耗") || names.has("整体消耗占比")) return "推直播";
   if (/商品/.test(sheetName) || names.has("整体展示次数") || names.has("整体未完结预售订单预估金额")) return "推商品";
   if (names.has("素材ID") && names.has("日期") && (names.has("整体展示次数") || names.has("整体展现次数"))) return "推商品";
   return "";
 }
 
-export function validateReportHeaders(headers = []) {
+export function validateReportHeaders(headers = [], reportType = "") {
   const names = new Set(headers);
+  const detected = reportType || detectReportType(headers);
+  if (detected === "淘系短视频") {
+    return ["日期", "主体ID", "主体名称", "展现量", "点击量", "花费", "总成交金额", "总成交笔数"]
+      .filter((name) => !names.has(name));
+  }
   return Object.entries(FIELD_ALIASES)
     .filter(([, aliases]) => !aliases.some((alias) => names.has(alias)))
     .map(([field]) => ({
@@ -95,32 +111,37 @@ export function validateReportHeaders(headers = []) {
 export function normalizeExcelRow(row, reportType = "") {
   const explicitReportType = typeof reportType === "string" ? reportType : "";
   const deliveryMode = explicitReportType || row.__reportType || detectReportType(Object.keys(row), "") || "推商品";
-  const shopCode = String(pick(row, FIELD_ALIASES.shopCode)).trim();
-  const qianchuanId = String(row["千川ID"] ?? "").trim();
-  const materialId = String(row["素材ID"] ?? "").trim();
-  const materialName = String(row["素材视频名称"] ?? "未命名素材").trim() || "未命名素材";
-  const videoType = String(row["全域素材视频类型"] ?? "").trim();
+  const isTmall = deliveryMode === "淘系短视频";
+  const platform = isTmall ? "淘系" : "抖音";
+  const shopCode = isTmall
+    ? String(row["店铺"] ?? row["店铺名称"] ?? row["店铺编码"] ?? "淘系店铺").trim()
+    : String(pick(row, FIELD_ALIASES.shopCode)).trim();
+  const qianchuanId = String(isTmall ? row["计划ID"] ?? "" : row["千川ID"] ?? "").trim();
+  const materialId = String(isTmall ? row["主体ID"] ?? "" : row["素材ID"] ?? "").trim();
+  const materialName = String(isTmall ? row["主体名称"] ?? "未命名素材" : row["素材视频名称"] ?? "未命名素材").trim() || "未命名素材";
+  const videoType = String(isTmall ? row["主体类型"] ?? "短视频" : row["全域素材视频类型"] ?? "").trim();
   const date = normalizeDate(row["日期"]);
-  const impressions = numberValue(pick(row, FIELD_ALIASES.impressions));
-  const clicks = numberValue(row["整体点击次数"]);
-  const spend = numberValue(row["整体消耗"]);
-  const grossAmount = numberValue(row["整体成交金额"]);
-  const grossOrders = numberValue(row["整体成交订单数"]);
-  const netAmount = numberValue(row["净成交金额"]);
-  const netOrders = numberValue(row["净成交订单数"]);
-  const videoPlays = numberValue(row["视频播放数"]);
-  const videoCompletionRate = percentValue(row["视频完播率"]);
-  const videoCompletes = numberValue(row["视频完播数"]) || videoPlays * videoCompletionRate;
-  const avgWatchTime = numberValue(row["平均观看时长"]);
+  const impressions = numberValue(isTmall ? row["展现量"] : pick(row, FIELD_ALIASES.impressions));
+  const clicks = numberValue(isTmall ? row["点击量"] : row["整体点击次数"]);
+  const spend = numberValue(isTmall ? row["花费"] : row["整体消耗"]);
+  const grossAmount = numberValue(isTmall ? row["总成交金额"] : row["整体成交金额"]);
+  const grossOrders = numberValue(isTmall ? row["总成交笔数"] : row["整体成交订单数"]);
+  const netAmount = isTmall ? grossAmount : numberValue(row["净成交金额"]);
+  const netOrders = isTmall ? grossOrders : numberValue(row["净成交订单数"]);
+  const videoPlays = numberValue(isTmall ? row["观看量"] : row["视频播放数"]);
+  const videoCompletionRate = percentValue(isTmall ? row["有效观看率"] : row["视频完播率"]);
+  const videoCompletes = numberValue(isTmall ? row["有效观看量"] : row["视频完播数"]) || videoPlays * videoCompletionRate;
+  const avgWatchTime = numberValue(isTmall ? row["平均有效观看时长"] : row["平均观看时长"]);
   const refund1hAmount = numberValue(row["1小时内退款金额"]);
   const refund1hRate = percentValue(row["1小时内退款率"]);
   const isSummary = ["-", "全部"].includes(materialId) || (videoType === "全部" && materialName === "全部");
-  const keyParts = ["v2", deliveryMode, shopCode, qianchuanId || "-", materialId, date];
+  const keyParts = ["v3", deliveryMode, shopCode, qianchuanId || "-", materialId, date];
   const materialKey = [deliveryMode, shopCode, qianchuanId || "-", materialId].join("::");
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     key: keyParts.join("::"),
     materialKey,
+    platform,
     deliveryMode,
     shopCode,
     qianchuanId,
@@ -128,6 +149,8 @@ export function normalizeExcelRow(row, reportType = "") {
     materialName,
     materialCreatedAt: String(row["素材创建时间"] ?? ""),
     videoType,
+    planName: String(row["计划名字"] ?? ""),
+    itemId: String(row["宝贝ID"] ?? ""),
     date,
     isSummary,
     impressions,
@@ -149,7 +172,7 @@ export function normalizeExcelRow(row, reportType = "") {
     unfinishedPresaleAmount: numberValue(row["整体未完结预售订单预估金额"]),
     refund1hOrders: numberValue(row["1小时内退款订单数"]),
     refund1hAmount,
-    refundWeighted: refund1hAmount || grossAmount * refund1hRate || Math.max(0, grossAmount - netAmount),
+    refundWeighted: isTmall ? 0 : refund1hAmount || grossAmount * refund1hRate || Math.max(0, grossAmount - netAmount),
     settlement7Amount: numberValue(row["7日结算金额"]),
     settlement7Orders: numberValue(row["7日结算订单数"]),
     settlement14Amount: numberValue(row["14日结算金额"]),
@@ -160,23 +183,40 @@ export function normalizeExcelRow(row, reportType = "") {
     settlement90Orders: numberValue(row["90日结算订单数"]),
     videoPlays,
     videoCompletes,
-    likes: numberValue(row["视频点赞数"]),
-    comments: numberValue(row["视频评论数"]),
-    newFollowers: numberValue(row["新增粉丝数"]),
-    watchTimeWeighted: videoPlays * avgWatchTime,
+    effectiveViews: isTmall ? videoCompletes : 0,
+    engagements: numberValue(isTmall ? row["互动量"] : 0),
+    likes: numberValue(isTmall ? row["点赞量"] : row["视频点赞数"]),
+    comments: numberValue(isTmall ? row["评论量"] : row["视频评论数"]),
+    shares: numberValue(isTmall ? row["转发量"] : 0),
+    newFollowers: numberValue(isTmall ? row["关注量"] : row["新增粉丝数"]),
+    watchTimeWeighted: (isTmall ? videoCompletes : videoPlays) * avgWatchTime,
     twoSecondPlays: videoPlays * percentValue(row["2秒播放率"]),
     threeSecondPlays: videoPlays * percentValue(row["3秒播放率"]),
     fiveSecondPlays: videoPlays * percentValue(row["5秒播放率"]),
     tenSecondPlays: videoPlays * percentValue(row["10秒播放率"]),
     grossAmountShare: percentValue(row["整体成交金额占比"]),
     spendShare: percentValue(row["整体消耗占比"]),
+    directGrossAmount: numberValue(row["直接成交金额"]),
+    indirectGrossAmount: numberValue(row["间接成交金额"]),
+    favoriteCart: numberValue(row["宝贝收藏加购数"]),
+    addCart: numberValue(row["宝贝加购数"]),
+    favorites: numberValue(row["总收藏数"]),
+    guidedVisits: numberValue(row["引导访问量"]),
+    guidedVisitors: numberValue(row["引导访问人数"]),
+    deepVisits: numberValue(row["深度访问量"]),
+    newCustomerReach: numberValue(row["新客触达数"]),
+    newCustomerOrders: numberValue(row["新客成交笔数"]),
+    newCustomerAmount: numberValue(row["新客成交金额"]),
   };
 }
 
 export function normalizeStoredRows(rows) {
-  const currentIdentities = new Set(rows.filter((row) => row.schemaVersion === 2).map((row) => `${row.deliveryMode}::${row.shopCode}::${row.materialId}::${row.date}`));
-  return rows.filter((row) => row.schemaVersion === 2 || !currentIdentities.has(`${row.deliveryMode || "推商品"}::${row.shopCode}::${row.materialId}::${row.date}`)).map((row) => ({
+  const identityOf = (row) => `${row.deliveryMode || "推商品"}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}::${row.date}`;
+  const latestVersions = new Map();
+  for (const row of rows) latestVersions.set(identityOf(row), Math.max(latestVersions.get(identityOf(row)) || 0, Number(row.schemaVersion) || 1));
+  return rows.filter((row) => (Number(row.schemaVersion) || 1) === latestVersions.get(identityOf(row))).map((row) => ({
     deliveryMode: "推商品",
+    platform: REPORT_META[row.deliveryMode]?.platform || "抖音",
     qianchuanId: "",
     videoType: "",
     ...row,
@@ -211,7 +251,7 @@ function categoryOf(name) {
   const sets = [
     ["毛绒", /毛绒|公仔|玩偶|小猪|猫|熊|挂件|水豚|史迪仔|阿柴/i],
     ["潮玩", /盲盒|三丽鸥|kitty|萌豆|yoyo|冰箱贴|腕表|玩具/i],
-    ["出行个护", /气囊梳|梳子|风扇|随手杯|保温杯|旅行|u型枕|个护/i],
+    ["出行个护", /气囊梳|梳子|风扇|随手杯|保温杯|旅行|u型枕|个护|干发|喷雾|洗护|清洁|油头/i],
     ["香氛护肤彩妆", /香水|香氛|护肤|彩妆|气垫|口红|唇|面膜|精华/i],
   ];
   const matched = sets.filter(([, re]) => re.test(name)).map(([label]) => label);
@@ -225,6 +265,8 @@ const SUM_FIELDS = [
   "settlement7Amount", "settlement7Orders", "settlement14Amount", "settlement14Orders", "settlement30Amount", "settlement30Orders",
   "settlement90Amount", "settlement90Orders", "videoPlays", "videoCompletes", "likes", "comments", "newFollowers", "watchTimeWeighted",
   "twoSecondPlays", "threeSecondPlays", "fiveSecondPlays", "tenSecondPlays",
+  "effectiveViews", "engagements", "shares", "directGrossAmount", "indirectGrossAmount", "favoriteCart", "addCart", "favorites",
+  "guidedVisits", "guidedVisitors", "deepVisits", "newCustomerReach", "newCustomerOrders", "newCustomerAmount",
 ];
 
 function aggregateRows(rows) {
@@ -233,6 +275,7 @@ function aggregateRows(rows) {
     const deliveryMode = row.deliveryMode || "推商品";
     const key = `${deliveryMode}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}`;
     const current = map.get(key) || {
+      platform: row.platform || REPORT_META[deliveryMode]?.platform || "抖音",
       deliveryMode,
       shopCode: row.shopCode,
       qianchuanId: row.qianchuanId || "",
@@ -240,6 +283,8 @@ function aggregateRows(rows) {
       name: row.materialName,
       materialCreatedAt: row.materialCreatedAt || "",
       videoType: row.videoType || "",
+      planName: row.planName || "",
+      itemId: row.itemId || "",
       dates: new Set(),
       activeDaysTotal: 0,
       rowCount: 0,
@@ -250,6 +295,8 @@ function aggregateRows(rows) {
     current.name = row.materialName || current.name;
     current.videoType = row.videoType || current.videoType;
     current.materialCreatedAt = row.materialCreatedAt || current.materialCreatedAt;
+    current.planName = row.planName || current.planName;
+    current.itemId = row.itemId || current.itemId;
     current.dates.add(row.date);
     current.activeDaysTotal += row.isMonthlyAggregate ? n(row.activeDays) : 0;
     current.rowCount += 1;
@@ -280,7 +327,14 @@ function enrich(item) {
     refund: div(Math.max(0, item.grossAmount - item.netAmount), item.grossAmount),
     refund1hRate: div(item.refund1hAmount, item.grossAmount),
     videoCompletionRate: div(item.videoCompletes, item.videoPlays),
-    avgWatchTime: div(item.watchTimeWeighted, item.videoPlays),
+    effectiveViewRate: div(item.effectiveViews, item.videoPlays),
+    avgWatchTime: div(item.watchTimeWeighted, item.platform === "淘系" ? item.effectiveViews : item.videoPlays),
+    interactionRate: div(item.engagements, item.videoPlays),
+    favoriteCartRate: div(item.favoriteCart, item.clicks),
+    addCartRate: div(item.addCart, item.clicks),
+    guidedVisitRate: div(item.guidedVisits, item.impressions),
+    newCustomerRate: div(item.newCustomerOrders, item.clicks),
+    directAmountShare: div(item.directGrossAmount, item.grossAmount),
     twoSecondRate: div(item.twoSecondPlays, item.videoPlays),
     threeSecondRate: div(item.threeSecondPlays, item.videoPlays),
     fiveSecondRate: div(item.fiveSecondPlays, item.videoPlays),
@@ -293,7 +347,7 @@ function enrich(item) {
     settlement14Rate: div(item.settlement14Amount, item.grossAmount),
     settlement30Rate: div(item.settlement30Amount, item.grossAmount),
     settlement90Rate: div(item.settlement90Amount, item.grossAmount),
-    category: categoryOf(item.name),
+    category: categoryOf(`${item.name || ""} ${item.planName || ""}`),
   };
 }
 
@@ -314,6 +368,15 @@ function summarize(materials) {
     avgWatchTime: div(total.watchTimeWeighted, total.videoPlays),
     threeSecondRate: div(total.threeSecondPlays, total.videoPlays),
     fiveSecondRate: div(total.fiveSecondPlays, total.videoPlays),
+    effectiveViewRate: div(total.effectiveViews, total.videoPlays),
+    avgWatchTime: div(total.watchTimeWeighted, total.effectiveViews || total.videoPlays),
+    interactionRate: div(total.engagements, total.videoPlays),
+    favoriteCartRate: div(total.favoriteCart, total.clicks),
+    addCartRate: div(total.addCart, total.clicks),
+    guidedVisitRate: div(total.guidedVisits, total.impressions),
+    newCustomerRate: div(total.newCustomerOrders, total.clicks),
+    newCustomerRoi: div(total.newCustomerAmount, total.spend),
+    directAmountShare: div(total.directGrossAmount, total.grossAmount),
   };
 }
 
@@ -322,6 +385,14 @@ function classifyFunctional(item, thresholds) {
   const highCtr = item.ctr >= thresholds.ctrMedian;
   const highCvr = item.cvr >= thresholds.cvrMedian;
   const highRoi = item.netRoi >= thresholds.roiMedian;
+  if (item.platform === "淘系") {
+    const highVisit = item.guidedVisitRate >= thresholds.visitMedian;
+    if (highCtr && highCvr && highRoi) return "爆款型";
+    if ((highCtr || highVisit) && !highCvr) return "引流型";
+    if (item.spend >= thresholds.spend75 && !highRoi) return "损耗型";
+    if (item.spend <= thresholds.spendMedian && item.grossRoi >= thresholds.roi75) return "精品型";
+    return "其他";
+  }
   if (highCtr && item.refund >= thresholds.refundRisk) return "误导型";
   if (highCtr && highCvr && highRoi) return "爆款型";
   if (highCtr && !highCvr) return "引流型";
@@ -331,6 +402,14 @@ function classifyFunctional(item, thresholds) {
 }
 
 function actionFor(item) {
+  if (item.platform === "淘系") {
+    if (item.spend >= 50 && item.grossOrders === 0) return "停止继续试量，优先重做前段吸引力、商品卖点和进店承接。";
+    if (item.functionalType === "损耗型") return "降低预算或出价，检查有效观看到访问、加购及成交的断点；无改善则暂停。";
+    if (item.functionalType === "引流型") return "保留引流价值，重点优化商品承接、收藏加购激励和成交路径。";
+    if (item.functionalType === "精品型") return "小步增加预算，观察放量后的成交ROI、收藏加购率和新客成本是否稳定。";
+    if (item.functionalType === "爆款型") return "保持预算并复制题材，持续监测有效观看、收藏加购和成交ROI衰退。";
+    return "小预算验证，观察有效观看、访问、收藏加购和成交效率后再决定是否放量。";
+  }
   const landing = item.deliveryMode === "推直播" ? "直播间承接、开场话术和人货匹配" : "商品承接、利益点和成交路径";
   if (item.grossOrders >= 10 && item.grossAmount >= 500 && item.refund >= 0.2) return `暂停扩量，核对内容承诺与实际成交体验，并复盘${landing}。`;
   if (item.spend >= 50 && item.netOrders === 0) return `停止继续试量；如需重启，先更换前3秒内容并优化${landing}。`;
@@ -345,8 +424,16 @@ function actionFor(item) {
 function reasonFor(item) {
   const reasons = [];
   if (item.spend < 50) reasons.push("消耗不足¥50，暂不进入稳定评分");
-  else reasons.push(`${item.deliveryMode}同类贝叶斯净ROI ${item.bayesNetRoi.toFixed(2)}`);
+  else reasons.push(item.platform === "淘系"
+    ? `淘系同类贝叶斯成交ROI ${item.bayesRoi.toFixed(2)}`
+    : `${item.deliveryMode}同类贝叶斯净ROI ${item.bayesNetRoi.toFixed(2)}`);
   reasons.push(`内容质量分 ${item.contentScore.toFixed(0)}`);
+  if (item.platform === "淘系") {
+    reasons.push(`有效观看率 ${(item.effectiveViewRate * 100).toFixed(1)}%`);
+    reasons.push(`收藏加购率 ${(item.favoriteCartRate * 100).toFixed(1)}%`);
+    if (item.newCustomerOrders) reasons.push(`新客成交 ${item.newCustomerOrders.toFixed(0)} 笔`);
+    return reasons.join("；");
+  }
   if (item.refund >= 0.15) reasons.push(`退款损失率 ${(item.refund * 100).toFixed(1)}%`);
   if (item.netOrders) reasons.push(`净订单成本 ¥${item.cpa.toFixed(2)}`);
   else if (item.spend >= 50) reasons.push("有消耗但无净订单");
@@ -378,6 +465,7 @@ function modelCohort(items, deliveryMode) {
     spendMedian: quantile(eligible.map((item) => item.spend), 0.5),
     spend75: quantile(eligible.map((item) => item.spend), 0.75),
     refundRisk: 0.15,
+    visitMedian: quantile(eligible.map((item) => item.guidedVisitRate), 0.5),
   };
   const source = modeled.filter((item) => item.spend >= 50);
   const ranks = {
@@ -391,6 +479,12 @@ function modelCohort(items, deliveryMode) {
     complete: ranker(source.map((item) => item.videoCompletionRate)),
     threeSecond: ranker(source.map((item) => item.threeSecondRate)),
     fiveSecond: ranker(source.map((item) => item.fiveSecondRate)),
+    effective: ranker(source.map((item) => item.effectiveViewRate)),
+    avgWatch: ranker(source.map((item) => item.avgWatchTime)),
+    interaction: ranker(source.map((item) => item.interactionRate)),
+    favoriteCart: ranker(source.map((item) => item.favoriteCartRate)),
+    visit: ranker(source.map((item) => item.guidedVisitRate)),
+    newCustomer: ranker(source.map((item) => item.newCustomerRate)),
   };
   const weights = SCORE_WEIGHTS[deliveryMode] || SCORE_WEIGHTS["推商品"];
   const materials = modeled.map((item) => {
@@ -405,10 +499,17 @@ function modelCohort(items, deliveryMode) {
       complete: ranks.complete(item.videoCompletionRate),
       threeSecond: ranks.threeSecond(item.threeSecondRate),
       fiveSecond: ranks.fiveSecond(item.fiveSecondRate),
+      effective: ranks.effective(item.effectiveViewRate),
+      avgWatch: ranks.avgWatch(item.avgWatchTime),
+      interaction: ranks.interaction(item.interactionRate),
+      favoriteCart: ranks.favoriteCart(item.favoriteCartRate),
+      visit: ranks.visit(item.guidedVisitRate),
+      newCustomer: ranks.newCustomer(item.newCustomerRate),
     };
     const score = item.spend < 50 ? 0 : Math.round(100 * Object.entries(weights).reduce((sum, [key, weight]) => sum + weight * values[key], 0));
-    const contentWeight = weights.complete + weights.threeSecond + weights.fiveSecond;
-    const contentScore = item.spend < 50 ? 0 : 100 * (weights.complete * values.complete + weights.threeSecond * values.threeSecond + weights.fiveSecond * values.fiveSecond) / contentWeight;
+    const contentWeights = CONTENT_WEIGHTS[deliveryMode] || CONTENT_WEIGHTS["推商品"];
+    const contentScore = item.spend < 50 ? 0 : 100 * Object.entries(contentWeights)
+      .reduce((sum, [key, weight]) => sum + weight * values[key], 0);
     const tier = score >= 70 ? "good" : score >= 40 ? "normal" : "poor";
     const functionalType = classifyFunctional(item, thresholds);
     const result = { ...item, score, contentScore, tier, functionalType };
@@ -452,23 +553,26 @@ export function analyzeRows(rows) {
       type,
       count: items.length,
       share: div(items.length, eligible.length),
+      ...totals,
       spendShare: div(totals.spend, summary.spend),
       netShare: div(totals.netAmount, summary.netAmount),
-      netRoi: totals.netRoi,
-      refundRate: totals.refundRate,
     };
   });
   const modeSummaries = Object.keys(REPORT_META).map((mode) => {
     const items = materials.filter((item) => item.deliveryMode === mode);
-    return { mode, count: items.length, eligible: items.filter((item) => item.spend >= 50).length, ...summarize(items) };
+    return { mode, platform: REPORT_META[mode].platform, count: items.length, eligible: items.filter((item) => item.spend >= 50).length, ...summarize(items) };
   }).filter((item) => item.count);
   const months = new Map();
   for (const row of rows) {
     const month = row.date.slice(0, 7);
-    const current = months.get(month) || { month, spend: 0, grossAmount: 0, netAmount: 0, ids: new Set() };
+    const current = months.get(month) || { month, spend: 0, grossAmount: 0, netAmount: 0, effectiveViews: 0, favoriteCart: 0, guidedVisits: 0, newCustomerOrders: 0, ids: new Set() };
     current.spend += n(row.spend);
     current.grossAmount += n(row.grossAmount);
     current.netAmount += n(row.netAmount);
+    current.effectiveViews += n(row.effectiveViews);
+    current.favoriteCart += n(row.favoriteCart);
+    current.guidedVisits += n(row.guidedVisits);
+    current.newCustomerOrders += n(row.newCustomerOrders);
     current.ids.add(`${row.deliveryMode}::${row.shopCode}::${row.qianchuanId || "-"}::${row.materialId}`);
     months.set(month, current);
   }
@@ -477,6 +581,10 @@ export function analyzeRows(rows) {
     spend: item.spend,
     grossAmount: item.grossAmount,
     netAmount: item.netAmount,
+    effectiveViews: item.effectiveViews,
+    favoriteCart: item.favoriteCart,
+    guidedVisits: item.guidedVisits,
+    newCustomerOrders: item.newCustomerOrders,
     grossRoi: div(item.grossAmount, item.spend),
     netRoi: div(item.netAmount, item.spend),
     materials: item.ids.size,
